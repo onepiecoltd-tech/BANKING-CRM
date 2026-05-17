@@ -403,69 +403,106 @@ def reflector_node(state: RMAgentState) -> RMAgentState:
 
 def responder_node(state: RMAgentState) -> RMAgentState:
     """
-    Build the final answer. Uses LLM for natural language quality (1 call).
-    Falls back to a structured template if LLM fails or quota is exhausted.
+    Build the final answer with a rich, name-based summary.
+    Falls back to a structured template if LLM fails.
     """
     customers = state["customer_set"]
     scores    = state["scores_cache"]
     drafts    = state["drafts"]
     query     = state["user_query"]
 
-    # Build a compact data summary to feed the LLM — no raw lists, just facts
-    top_scored = sorted(scores.values(), key=lambda x: x.get("score", 0), reverse=True)[:TOP_N]
-    score_summary = "\n".join(
-        f"  - {s.get('customer_id')} ({s.get('tier','?')}): score {s.get('score',0):.1f}"
-        for s in top_scored
-    ) or "  None scored yet."
+    # Build a name lookup from customer_set so we never show raw IDs
+    id_to_name = {c["customer_id"]: c.get("name", c["customer_id"]) for c in customers}
 
-    draft_summary_parts = []
-    for d in drafts[:TOP_N]:
-        conv = d.get("conversion_probability")
-        conv_str = f" ({conv*100:.0f}% conv. prob.)" if conv is not None else ""
-        pnote = d.get("personalization_note", "")
-        draft_summary_parts.append(
-            f"  - {d['customer_name']}{conv_str}: \"{d['message'][:80]}…\"\n"
-            f"    Signals: {pnote}"
+    # Top-scored customers — use names, not IDs
+    top_scored = sorted(scores.values(), key=lambda x: x.get("score", 0), reverse=True)[:TOP_N]
+    score_lines = []
+    for s in top_scored:
+        cid  = s.get("customer_id", "")
+        name = id_to_name.get(cid, cid)
+        score_lines.append(
+            f"  - {name} ({s.get('tier','?')} tier, score {s.get('score',0):.0f}/100)"
         )
-    draft_summary = "\n".join(draft_summary_parts) or "  None drafted."
+    score_summary = "\n".join(score_lines) or "  None scored."
+
+    # Draft summary — name + conv prob + first 100 chars of the actual message
+    draft_lines = []
+    for d in drafts[:TOP_N]:
+        conv  = d.get("conversion_probability")
+        prob  = f"{conv*100:.0f}% conv. prob." if conv is not None else "prob. unknown"
+        msg   = (d.get("message") or "")[:100]
+        pnote = d.get("personalization_note", "")
+        signals = f" Signals: {pnote}." if pnote else ""
+        draft_lines.append(
+            f"  - {d['customer_name']} ({prob}): \"{msg}…\"\n"
+            f"    Framework: {d.get('framework','AIDA')}, Tone: {d.get('tone','warm')}.{signals}"
+        )
+    draft_summary = "\n".join(draft_lines) or "  None drafted."
+
+    # Segment breakdown for larger result sets
+    seg_counts: dict[str, int] = {}
+    for c in customers:
+        seg = c.get("segment", "unknown")
+        seg_counts[seg] = seg_counts.get(seg, 0) + 1
+    seg_str = ", ".join(f"{v} {k}" for k, v in sorted(seg_counts.items(), key=lambda x: -x[1]))
 
     data_block = (
-        f"Customers found: {len(customers)}\n"
-        f"Top scored:\n{score_summary}\n"
-        f"Drafts prepared:\n{draft_summary}"
+        f"Total customers found: {len(customers)} ({seg_str})\n"
+        f"Top scored (by CLV score):\n{score_summary}\n"
+        f"Outreach drafts ready ({len(drafts)} total):\n{draft_summary}"
     )
 
     prompt = (
-        f"You are a banking CRM assistant. The relationship manager asked:\n"
-        f"\"{query}\"\n\n"
-        f"Here is what the agent completed:\n{data_block}\n\n"
-        f"Write a concise, friendly 2–4 sentence summary for the RM. "
-        f"Mention key numbers, highlight the top customer(s), and confirm what's ready to send. "
-        f"Do not use bullet lists — write in natural prose."
+        f"You are a banking CRM assistant summarising agent output for a Relationship Manager.\n"
+        f"The RM asked: \"{query}\"\n\n"
+        f"Agent results:\n{data_block}\n\n"
+        f"Write a crisp 3–5 sentence summary. Rules:\n"
+        f"- ALWAYS use real customer NAMES (never IDs like CUST000001)\n"
+        f"- Quote the actual conversion probability % for each drafted customer\n"
+        f"- Mention the segment breakdown if more than 10 customers were found\n"
+        f"- State exactly how many drafts are ready and name the top 2–3 recipients\n"
+        f"- End with one actionable next-step recommendation\n"
+        f"- Write in natural prose, no bullet points"
     )
 
     try:
         llm = get_llm_from_state(state, role="default")
         answer = llm.complete(
-            [LLMMessage("system", "You are a helpful banking CRM assistant. Be concise and specific."),
+            [LLMMessage("system",
+                "You are a precise banking CRM assistant. Always refer to customers by name. "
+                "Be specific with numbers and percentages. Never use placeholder IDs."),
              LLMMessage("user", prompt)],
-            temperature=0.5,
-            max_tokens=300,
+            temperature=0.3,
+            max_tokens=350,
         )
+        # Safety net: if LLM still leaked an ID pattern, fall through to template
+        import re as _re
+        if _re.search(r"\bCUST\d{6}\b", answer):
+            raise ValueError("LLM response contained raw customer ID")
     except Exception:
-        # Quota exhausted or network error — fall back to template, never crash
-        parts = []
-        if customers:
-            parts.append(f"Found {len(customers)} customers matching your criteria.")
+        # Rich deterministic fallback — never show raw IDs
+        parts = [f"Found {len(customers)} customers ({seg_str})."]
         if top_scored:
-            best = top_scored[0]
+            top_names = [id_to_name.get(s.get("customer_id",""), "Unknown") for s in top_scored[:2]]
             parts.append(
-                f"Top customer: {best.get('customer_id')} "
-                f"(score {best.get('score',0):.1f}, {best.get('tier','?')})."
+                f"Top picks by CLV score: {' and '.join(top_names)} "
+                f"({top_scored[0].get('tier','?')} tier, score {top_scored[0].get('score',0):.0f}/100)."
             )
         if drafts:
-            parts.append(f"{len(drafts)} outreach message(s) are ready to send.")
-        answer = " ".join(parts) or "Task completed — no matching customers found."
+            drafted_names = [d["customer_name"] for d in drafts[:3]]
+            probs = [
+                f"{d['customer_name'].split()[0]} {d.get('conversion_probability',0)*100:.0f}%"
+                for d in drafts[:3] if d.get("conversion_probability") is not None
+            ]
+            parts.append(
+                f"{len(drafts)} personalised draft(s) ready for: {', '.join(drafted_names)}."
+            )
+            if probs:
+                parts.append(f"Conversion probabilities — {', '.join(probs)}.")
+            parts.append("Review the drafts below and send via the Campaign Builder.")
+        else:
+            parts.append("No drafts were prepared — refine filters and try again.")
+        answer = " ".join(parts)
 
     state["final_answer"] = answer
     state["conversation_history"].append({"role": "assistant", "content": answer})
