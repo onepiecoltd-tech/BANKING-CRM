@@ -550,6 +550,132 @@ async def run_agent(body: AgentRequest):
     }
 
 
+# ── Agent streaming (SSE) ─────────────────────────────────────────────────────
+
+from fastapi.responses import StreamingResponse
+
+@app.post("/api/agent/stream")
+async def stream_agent(body: AgentRequest):
+    """
+    Server-Sent Events endpoint — emits one JSON event per LangGraph node
+    so the frontend can show real-time progress:
+      {"event":"node","node":"planner","status":"running"}
+      {"event":"node","node":"planner","status":"done","detail":"Plan: Query → Score → Draft"}
+      {"event":"tool","name":"query_customers","status":"done","count":50}
+      {"event":"done","answer":"...","customers":[...],"drafts":[...]}
+    """
+    import json as _json
+
+    async def _generate():
+        async with _llm_semaphore:
+            provider = _build_provider(body.llm_backend, body.ollama_model, body.nvidia_model)
+            state = create_initial_state(
+                body.query,
+                llm_backend=body.llm_backend,
+                llm_provider=provider,
+                planner_backend=body.planner_backend,
+                executor_backend=body.executor_backend,
+                ollama_model=body.ollama_model,
+                nvidia_model=body.nvidia_model,
+            )
+
+            nodes = ["planner", "executor", "reflector", "responder"]
+            node_labels = {
+                "planner":   "📋 Planning task",
+                "executor":  "⚙️  Executing tools",
+                "reflector": "🔍 Checking results",
+                "responder": "✍️  Synthesizing answer",
+            }
+
+            from src.rm_agent.nodes import (
+                planner_node, executor_node, reflector_node, responder_node
+            )
+            node_fns = {
+                "planner":   planner_node,
+                "executor":  executor_node,
+                "reflector": reflector_node,
+                "responder": responder_node,
+            }
+
+            loop = asyncio.get_event_loop()
+            current = "planner"
+            max_iters = 12  # safety cap on executor loops
+
+            for _iter in range(max_iters):
+                if current not in node_fns:
+                    break
+
+                label = node_labels.get(current, current)
+
+                # ── running event ──────────────────────────────────────────
+                yield f"data: {_json.dumps({'event':'node','node':current,'status':'running','label':label})}\n\n"
+                await asyncio.sleep(0)
+
+                # ── run the node in executor thread ────────────────────────
+                try:
+                    state = await loop.run_in_executor(None, node_fns[current], state)
+                except Exception as exc:
+                    yield f"data: {_json.dumps({'event':'error','node':current,'detail':str(exc)})}\n\n"
+                    break
+
+                # ── emit tool calls made during this node ──────────────────
+                emitted = set()
+                for call in state.get("tool_call_log", []):
+                    ts = call.get("timestamp", "")
+                    if ts not in emitted:
+                        emitted.add(ts)
+                        result = call.get("result", {})
+                        count  = len(result) if isinstance(result, list) else None
+                        yield f"data: {_json.dumps({'event':'tool','name':call.get('tool_name',''),'status':'done','count':count,'ts':ts})}\n\n"
+                        await asyncio.sleep(0)
+
+                # ── done event for this node ───────────────────────────────
+                detail = ""
+                if current == "planner":
+                    plan = state.get("task_plan", [])
+                    detail = " → ".join(plan) if plan else "Plan ready"
+                elif current == "executor":
+                    n_cust = len(state.get("customer_set", []))
+                    n_draft = len(state.get("drafts", []))
+                    detail = f"{n_cust} customers found, {n_draft} drafts"
+                elif current == "responder":
+                    detail = (state.get("final_answer", "") or "")[:80]
+
+                yield f"data: {_json.dumps({'event':'node','node':current,'status':'done','label':label,'detail':detail})}\n\n"
+                await asyncio.sleep(0)
+
+                # ── routing ────────────────────────────────────────────────
+                if current == "planner":
+                    current = "executor"
+                elif current == "executor":
+                    current = "reflector"
+                elif current == "reflector":
+                    step = state.get("step", 0)
+                    if step == 3 or step == 99:
+                        current = "responder"
+                    else:
+                        current = "executor"
+                elif current == "responder":
+                    break
+
+            # ── final done event ───────────────────────────────────────────
+            customer_set = state.get("customer_set", [])
+            payload = {
+                "event":                "done",
+                "answer":               state.get("final_answer", ""),
+                "customers":            customer_set,
+                "total_customers_found": len(customer_set),
+                "drafts":               state.get("drafts", []),
+                "task_plan":            state.get("task_plan", []),
+                "tool_call_count":      len(state.get("tool_call_log", [])),
+                "error":                state.get("error"),
+            }
+            yield f"data: {_json.dumps(payload)}\n\n"
+
+    return StreamingResponse(_generate(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 # ── Settings ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/settings")
@@ -741,16 +867,52 @@ async def twilio_webhook(request: Request):
             outreach_msg = sandbox_ctx["message"]
             customer = session.query(Customer).filter_by(customer_id=customer_id).first()
         else:
+            # In-memory session map was lost (restart / new process).
+            # Strategy 1: check if this phone matches a real customer in IdentityGraph
             ig = (session.query(IdentityGraph)
                   .filter_by(identifier_type="mobile", identifier_value=raw_phone)
                   .first())
-            customer = session.query(Customer).filter_by(customer_id=ig.canonical_id).first() if ig else None
-            last_int  = (session.query(Interaction)
-                         .filter_by(customer_id=customer.customer_id, channel="whatsapp")
-                         .order_by(Interaction.date.desc()).first()) if customer else None
-            product_id   = last_int.product_offered if last_int else None
-            outreach_msg = last_int.message if last_int else ""
-            customer_id  = customer.customer_id if customer else None
+            if ig:
+                customer = session.query(Customer).filter_by(customer_id=ig.canonical_id).first()
+                last_int = (
+                    session.query(Interaction)
+                    .filter_by(customer_id=customer.customer_id, channel="whatsapp")
+                    .order_by(Interaction.date.desc()).first()
+                ) if customer else None
+                product_id   = last_int.product_offered if last_int else None
+                outreach_msg = last_int.message if last_int else ""
+                customer_id  = customer.customer_id if customer else None
+            else:
+                # Strategy 2 (sandbox fallback): raw_phone is the RM/sandbox number.
+                # Find the customer with the most recent outreach interaction so the
+                # RM can test the reply flow even after a backend restart.
+                last_outreach = (
+                    session.query(Interaction)
+                    .filter(
+                        Interaction.channel == "whatsapp",
+                        Interaction.pipeline_state == "CONTACTED",
+                        Interaction.message != None,
+                        Interaction.message != "",
+                        Interaction.message != "Outreach message about product",
+                    )
+                    .order_by(Interaction.date.desc())
+                    .first()
+                )
+                if last_outreach:
+                    customer_id  = last_outreach.customer_id
+                    product_id   = last_outreach.product_offered
+                    outreach_msg = last_outreach.message or ""
+                    customer = session.query(Customer).filter_by(customer_id=customer_id).first()
+                    # Rebuild in-memory session so subsequent replies are fast
+                    _sandbox_sessions[raw_phone] = {
+                        "customer_id": customer_id,
+                        "product_id":  product_id,
+                        "message":     outreach_msg,
+                    }
+                else:
+                    customer = None
+                    customer_id = product_id = None
+                    outreach_msg = ""
 
         if customer and product_id:
             from src.tools.sales_agent import _classify_intent

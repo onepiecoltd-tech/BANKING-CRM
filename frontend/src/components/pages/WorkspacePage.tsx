@@ -350,6 +350,12 @@ export function WorkspacePage() {
   const [history, setHistory] = useState<HistorySession[]>(() => loadHistory());
   const [viewingSession, setViewingSession] = useState<HistorySession | null>(null);
 
+  // Live streaming node state for workflow rail
+  const [liveNodes, setLiveNodes] = useState<{
+    node: string; label: string; status: "running" | "done" | "error"; detail?: string;
+  }[]>([]);
+  const [liveTools, setLiveTools] = useState<{ name: string; count?: number | null }[]>([]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, running]);
@@ -372,29 +378,95 @@ export function WorkspacePage() {
     if (!text.trim() || running) return;
     setInput("");
     setPickerOpen(false);
+    setLiveNodes([]);
+    setLiveTools([]);
+    setRightTab("workflow"); // switch to workflow tab on send
 
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: text };
-    const agentMsg: ChatMessage = { id: crypto.randomUUID(), role: "agent", content: "", steps: [], result: null };
+    const agentMsgId = crypto.randomUUID();
+    const agentMsg: ChatMessage = { id: agentMsgId, role: "agent", content: "", steps: [], result: null };
     setMessages((m) => [...m, userMsg, agentMsg]);
     setRunning(true);
 
     try {
-      const result = await agentApi.run(text, activeConfig);
-      setMessages((m) => {
-        const updated = m.map((msg) =>
-          msg.id === agentMsg.id
-            ? { ...msg, content: result.answer ?? "Agent completed.", steps: result.steps ?? [], result, error: result.error ?? undefined }
-            : msg
-        );
-        // Save completed session to history
-        saveToHistory(updated);
-        setHistory(loadHistory());
-        return updated;
+      const config = activeConfig;
+      const body = typeof config === "string"
+        ? { query: text, llm_backend: config }
+        : { query: text, ...config };
+
+      const resp = await fetch("/api/agent/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+
+      if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+
+            if (evt.event === "node") {
+              setLiveNodes((prev) => {
+                const existing = prev.findIndex((n) => n.node === evt.node);
+                const entry = { node: evt.node, label: evt.label, status: evt.status, detail: evt.detail };
+                if (existing >= 0) {
+                  const next = [...prev]; next[existing] = entry; return next;
+                }
+                return [...prev, entry];
+              });
+            }
+
+            if (evt.event === "tool") {
+              setLiveTools((prev) => [...prev, { name: evt.name, count: evt.count }]);
+            }
+
+            if (evt.event === "done") {
+              // Build step list from live nodes + tools for the message
+              const steps: import("@/lib/api").AgentStep[] = [
+                ...liveNodes.map((n, i) => ({
+                  id: `node-${i}`, type: "plan" as const, label: n.label,
+                  detail: n.detail ?? "", startedAt: 0, endedAt: 1,
+                })),
+              ];
+              setMessages((m) => {
+                const updated = m.map((msg) =>
+                  msg.id === agentMsgId
+                    ? {
+                        ...msg,
+                        content: evt.answer ?? "Agent completed.",
+                        steps,
+                        result: evt,
+                        error: evt.error ?? undefined,
+                      }
+                    : msg
+                );
+                saveToHistory(updated);
+                setHistory(loadHistory());
+                return updated;
+              });
+            }
+          } catch {
+            // skip malformed SSE lines
+          }
+        }
+      }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
       setMessages((m) =>
-        m.map((msg) => msg.id === agentMsg.id ? { ...msg, content: "", error: errMsg, steps: [] } : msg)
+        m.map((msg) => msg.id === agentMsgId ? { ...msg, content: "", error: errMsg, steps: [] } : msg)
       );
     } finally {
       setRunning(false);
@@ -544,8 +616,56 @@ export function WorkspacePage() {
                   </span>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground mb-4">Live LangGraph node execution</div>
-              <WorkflowMini running={running} steps={latestAgentMsg?.steps} splitMode={splitMode} plannerModel={plannerModel} executorModel={executorModel} globalModel={globalModel} />
+              <div className="text-xs text-muted-foreground mb-3">Live LangGraph execution</div>
+
+              {/* Live streaming node progress */}
+              {(running || liveNodes.length > 0) && (
+                <div className="space-y-2 mb-4">
+                  {liveNodes.map((n) => (
+                    <div key={n.node} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs transition-all ${
+                      n.status === "running" ? "bg-primary/10 border border-primary/30" :
+                      n.status === "done"    ? "bg-emerald-500/10 border border-emerald-500/20" :
+                                              "bg-destructive/10 border border-destructive/20"
+                    }`}>
+                      <span className="mt-0.5 shrink-0">
+                        {n.status === "running" ? <Loader2 className="w-3 h-3 animate-spin text-primary" /> :
+                         n.status === "done"    ? <span className="text-emerald-400">✓</span> :
+                                                  <span className="text-destructive">✗</span>}
+                      </span>
+                      <div className="min-w-0">
+                        <div className={`font-medium ${n.status === "running" ? "text-primary" : n.status === "done" ? "text-emerald-400" : "text-destructive"}`}>
+                          {n.label}
+                        </div>
+                        {n.detail && (
+                          <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{n.detail}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {running && liveNodes.length > 0 && liveNodes[liveNodes.length - 1]?.status === "running" && (
+                    <div className="text-[10px] text-muted-foreground px-1 animate-pulse">Agent is working…</div>
+                  )}
+                </div>
+              )}
+
+              {/* Tool calls fired */}
+              {liveTools.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Tools called</div>
+                  <div className="flex flex-wrap gap-1">
+                    {liveTools.map((t, i) => (
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent font-mono">
+                        {t.name}{t.count != null ? ` (${t.count})` : ""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Static WorkflowMini when idle */}
+              {!running && liveNodes.length === 0 && (
+                <WorkflowMini running={false} steps={latestAgentMsg?.steps} splitMode={splitMode} plannerModel={plannerModel} executorModel={executorModel} globalModel={globalModel} />
+              )}
             </div>
           )}
 
