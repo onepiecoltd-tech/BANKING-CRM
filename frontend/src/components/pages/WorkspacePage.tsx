@@ -622,7 +622,7 @@ export function WorkspacePage() {
               {(running || liveNodes.length > 0) && (
                 <div className="space-y-2 mb-4">
                   {liveNodes.map((n) => (
-                    <div key={n.node} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs transition-all ${
+                    <div key={n.node} className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs transition-all overflow-hidden ${
                       n.status === "running" ? "bg-primary/10 border border-primary/30" :
                       n.status === "done"    ? "bg-emerald-500/10 border border-emerald-500/20" :
                                               "bg-destructive/10 border border-destructive/20"
@@ -632,12 +632,12 @@ export function WorkspacePage() {
                          n.status === "done"    ? <span className="text-emerald-400">✓</span> :
                                                   <span className="text-destructive">✗</span>}
                       </span>
-                      <div className="min-w-0">
-                        <div className={`font-medium ${n.status === "running" ? "text-primary" : n.status === "done" ? "text-emerald-400" : "text-destructive"}`}>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <div className={`font-medium truncate ${n.status === "running" ? "text-primary" : n.status === "done" ? "text-emerald-400" : "text-destructive"}`}>
                           {n.label}
                         </div>
                         {n.detail && (
-                          <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{n.detail}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5 truncate" title={n.detail}>{n.detail}</div>
                         )}
                       </div>
                     </div>
@@ -653,9 +653,10 @@ export function WorkspacePage() {
                 <div className="mb-4">
                   <div className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Tools called</div>
                   <div className="flex flex-wrap gap-1">
-                    {liveTools.map((t, i) => (
-                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent font-mono">
-                        {t.name}{t.count != null ? ` (${t.count})` : ""}
+                    {/* Dedupe tool names, show unique only */}
+                    {Array.from(new Map(liveTools.map(t => [t.name, t])).values()).map((t, i) => (
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent font-mono max-w-full truncate" title={t.name}>
+                        {t.name.replace(/_/g, " ")}{t.count != null ? ` ·${t.count}` : ""}
                       </span>
                     ))}
                   </div>

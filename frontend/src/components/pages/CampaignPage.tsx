@@ -228,7 +228,7 @@ function LeadCard({
           </div>
 
           {/* Message preview */}
-          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 italic">
+          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 italic break-words overflow-hidden">
             "{lead.message_preview.slice(0, 120)}{lead.message_preview.length > 120 ? "…" : ""}"
           </p>
         </div>

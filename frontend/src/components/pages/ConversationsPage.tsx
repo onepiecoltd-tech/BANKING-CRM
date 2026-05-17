@@ -201,12 +201,16 @@ function WaBubble({ text, from, time }: { text: string; from: "customer" | "agen
           <Sparkles className="w-3.5 h-3.5 text-primary-foreground" />
         </div>
       )}
-      <div className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm leading-snug shadow-sm ${
+      <div className={`max-w-[78%] min-w-0 rounded-2xl px-3 py-2 text-sm leading-snug shadow-sm ${
         isAgent
           ? "bg-[#1e2535] border border-white/8 rounded-bl-sm"
           : "bg-[#025144] border border-white/8 rounded-br-sm"
       }`}>
-        <div dangerouslySetInnerHTML={{ __html: html }} />
+        <div
+          className="break-words overflow-wrap-anywhere whitespace-pre-wrap"
+          style={{ overflowWrap: "anywhere" }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
         <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-muted-foreground">
           {time}
           {!isAgent && <CheckCheck className="w-3 h-3 text-blue-400" />}
