@@ -439,30 +439,38 @@ def responder_node(state: RMAgentState) -> RMAgentState:
         )
     draft_summary = "\n".join(draft_lines) or "  None drafted."
 
-    # Segment breakdown for larger result sets
+    # Segment breakdown
     seg_counts: dict[str, int] = {}
     for c in customers:
         seg = c.get("segment", "unknown")
         seg_counts[seg] = seg_counts.get(seg, 0) + 1
     seg_str = ", ".join(f"{v} {k}" for k, v in sorted(seg_counts.items(), key=lambda x: -x[1]))
 
+    n_found   = len(customers)
+    n_scored  = len(top_scored)
+    n_drafted = len(drafts)
+
     data_block = (
-        f"Total customers found: {len(customers)} ({seg_str})\n"
-        f"Top scored (by CLV score):\n{score_summary}\n"
-        f"Outreach drafts ready ({len(drafts)} total):\n{draft_summary}"
+        f"EXACT NUMBERS (use these, do not change them):\n"
+        f"  - Customers matching filters: {n_found} ({seg_str})\n"
+        f"  - Customers scored (top by CLV): {n_scored}\n"
+        f"  - Outreach drafts prepared: {n_drafted}\n\n"
+        f"Top scored customers:\n{score_summary}\n\n"
+        f"Outreach drafts:\n{draft_summary}"
     )
 
     prompt = (
         f"You are a banking CRM assistant summarising agent output for a Relationship Manager.\n"
         f"The RM asked: \"{query}\"\n\n"
-        f"Agent results:\n{data_block}\n\n"
-        f"Write a crisp 3–5 sentence summary. Rules:\n"
-        f"- ALWAYS use real customer NAMES (never IDs like CUST000001)\n"
-        f"- Quote the actual conversion probability % for each drafted customer\n"
-        f"- Mention the segment breakdown if more than 10 customers were found\n"
-        f"- State exactly how many drafts are ready and name the top 2–3 recipients\n"
-        f"- End with one actionable next-step recommendation\n"
-        f"- Write in natural prose, no bullet points"
+        f"{data_block}\n\n"
+        f"Write a crisp 3–5 sentence summary. STRICT RULES:\n"
+        f"- Use EXACTLY the numbers above — do not round, guess, or change them\n"
+        f"- Always say \"{n_found} customers found\" (not a different number)\n"
+        f"- Always say \"{n_drafted} draft(s) prepared\" (not a different number)\n"
+        f"- Use real customer NAMES (never IDs like CUST000001)\n"
+        f"- Quote the exact conversion probability % for each drafted customer\n"
+        f"- End with one specific next-step recommendation\n"
+        f"- Natural prose, no bullet points"
     )
 
     try:
@@ -480,8 +488,8 @@ def responder_node(state: RMAgentState) -> RMAgentState:
         if _re.search(r"\bCUST\d{6}\b", answer):
             raise ValueError("LLM response contained raw customer ID")
     except Exception:
-        # Rich deterministic fallback — never show raw IDs
-        parts = [f"Found {len(customers)} customers ({seg_str})."]
+        # Rich deterministic fallback — exact numbers, real names, no raw IDs
+        parts = [f"Found {n_found} customers matching your criteria ({seg_str})."]
         if top_scored:
             top_names = [id_to_name.get(s.get("customer_id",""), "Unknown") for s in top_scored[:2]]
             parts.append(
@@ -491,17 +499,17 @@ def responder_node(state: RMAgentState) -> RMAgentState:
         if drafts:
             drafted_names = [d["customer_name"] for d in drafts[:3]]
             probs = [
-                f"{d['customer_name'].split()[0]} {d.get('conversion_probability',0)*100:.0f}%"
+                f"{d['customer_name'].split()[0]} at {d.get('conversion_probability',0)*100:.0f}%"
                 for d in drafts[:3] if d.get("conversion_probability") is not None
             ]
             parts.append(
-                f"{len(drafts)} personalised draft(s) ready for: {', '.join(drafted_names)}."
+                f"{n_drafted} personalised draft(s) prepared for: {', '.join(drafted_names)}."
             )
             if probs:
                 parts.append(f"Conversion probabilities — {', '.join(probs)}.")
-            parts.append("Review the drafts below and send via the Campaign Builder.")
+            parts.append("Review the drafts below and hit Send via the Campaign Builder.")
         else:
-            parts.append("No drafts were prepared — refine filters and try again.")
+            parts.append("No outreach drafts were prepared — run again and include 'draft messages' in your request.")
         answer = " ".join(parts)
 
     state["final_answer"] = answer

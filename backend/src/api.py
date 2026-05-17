@@ -537,10 +537,12 @@ async def run_agent(body: AgentRequest):
         }
     ]
 
+    customer_set = final_state.get("customer_set", [])
     return {
         "answer": final_state.get("final_answer", ""),
         "steps": all_steps,
-        "customers": final_state.get("customer_set", [])[:10],
+        "customers": customer_set,           # full list — frontend shows all
+        "total_customers_found": len(customer_set),
         "drafts": final_state.get("drafts", []),
         "tool_call_count": len(final_state.get("tool_call_log", [])),
         "task_plan": final_state.get("task_plan", []),
