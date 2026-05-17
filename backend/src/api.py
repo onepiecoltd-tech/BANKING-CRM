@@ -984,9 +984,24 @@ async def twilio_webhook(request: Request):
     finally:
         session.close()
 
-    # Return TwiML — Twilio sends this as a WhatsApp message back to the customer
-    twiml = f'<?xml version="1.0"?><Response><Message>{ai_reply}</Message></Response>'
-    return Response(content=twiml, media_type="application/xml")
+    # ── Send reply via Twilio outbound API (more reliable than TwiML for WhatsApp) ──
+    # TwiML <Message> responses are unreliable for WhatsApp template button replies
+    # in sandbox mode. Using the Messages API directly guarantees delivery.
+    try:
+        from twilio.rest import Client as _TwilioClient
+        _tw = _TwilioClient(settings.twilio_account_sid, settings.twilio_auth_token)
+        _from = settings.twilio_phone_number
+        _wa_from = f"whatsapp:{_from}" if not _from.startswith("whatsapp:") else _from
+        _wa_to   = f"whatsapp:{raw_phone}" if not raw_phone.startswith("whatsapp:") else raw_phone
+        _tw.messages.create(from_=_wa_from, to=_wa_to, body=ai_reply)
+    except Exception as _e:
+        # Log but don't crash — still return empty TwiML so Twilio doesn't retry
+        import logging
+        logging.getLogger("bankrm").warning(f"Twilio reply send failed: {_e}")
+
+    # Return empty TwiML (reply already sent via outbound API above)
+    return Response(content='<?xml version="1.0"?><Response></Response>',
+                    media_type="application/xml")
 
 
 @app.get("/api/outreach/pipeline")
