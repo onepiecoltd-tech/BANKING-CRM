@@ -1,187 +1,379 @@
-<div align="center">
+# BankRM AI — Agentic Banking CRM
 
-# 🏦 BankRM AI
+> **Agentic AI system that helps Relationship Managers identify high-value customers, predict loan conversion, and send hyper-personalized WhatsApp outreach — all from a single natural-language query.**
 
-### AI-Powered WhatsApp Sales Agent for Banking Relationship Managers
-
-*Type a query. Get personalised loan offers sent to 50 customers. Watch the AI close the conversation — while you're in a meeting.*
-
-<br/>
-
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-FF6B35?style=for-the-badge&logo=chainlink&logoColor=white)](https://langchain-ai.github.io/langgraph/)
-[![Twilio](https://img.shields.io/badge/Twilio-WhatsApp-F22F46?style=for-the-badge&logo=twilio&logoColor=white)](https://twilio.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
-
-<br/>
-
-```
-RM types a query → AI scores 500 customers → drafts personalised messages with real EMIs
-→ sends via WhatsApp → customer taps a button → AI replies as Rahul (RM)
-→ pipeline stage updates → RM sees hot leads in the morning digest
-```
-
-</div>
+[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109-green)](https://fastapi.tiangolo.com)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.1-orange)](https://github.com/langchain-ai/langgraph)
+[![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev)
 
 ---
 
-## What This Actually Does
-
-Most "AI outreach tools" generate a message and stop. This one **has the full conversation**.
-
-| Step | What Happens |
-|---|---|
-| **1. Natural language query** | RM types *"Find premium customers in Mumbai who don't have a personal loan"* |
-| **2. Agent pipeline runs** | LangGraph chains 13 tool calls — scoring, transactions, message drafting per customer |
-| **3. Real financials computed** | EMI formula, credit-score-based rates, conversion probability from 9 behavioral signals |
-| **4. Personalised messages** | Each message has actual loan amount (₹19.1L), rate (10.5%), EMI (₹25,900/mo), tenure signal |
-| **5. Sent via WhatsApp** | WhatsApp Web (free) or Twilio Content API with 3 quick-reply buttons |
-| **6. Customer taps a button** | ✅ Yes, Interested! · 📞 Call Me · ❌ Not Now |
-| **7. AI replies instantly** | Intent classified → AI speaks as "Rahul (RM)" with the customer's exact loan details |
-| **8. Pipeline updated** | Stage moves: CONTACTED → INTERESTED / CALLBACK_REQUESTED / DECLINED |
-| **9. RM sees the inbox** | Live conversation dashboard, funnel stats, hot lead alerts |
+## Table of Contents
+1. [What it does](#what-it-does)
+2. [Architecture](#architecture)
+3. [Execution Flow](#execution-flow)
+4. [Tool Design & Usage](#tool-design--usage)
+5. [Key Design Decisions](#key-design-decisions)
+6. [Trade-offs & Limitations](#trade-offs--limitations)
+7. [Setup & Run](#setup--run)
+8. [Project Structure](#project-structure)
 
 ---
 
-## Demo
+## What it does
 
-### Agent Running — 13 Tool Calls, 3 Customers, Real Numbers
+A Relationship Manager types:
 
-```
-Query: "Find premium customers in Mumbai and draft personal loan messages"
+> *"Find high-value customers likely to convert for a personal loan this month and generate personalized WhatsApp messages."*
 
- Plan       → Score → Draft (× 3 customers)
- Tool calls → 13 total
+The system autonomously:
 
- Aaina Karpe     │ Conv: 63% │ WARM tone    │ ₹19.1L @ 10.5% p.a. │ EMI ₹25,900/mo
- Yasmin Badami   │ Conv:  2% │ URGENT tone  │ ₹25.0L @ 13.0% p.a. │ EMI ₹56,883/mo
- Lavanya Ratta   │ Conv:  2% │ URGENT tone  │ ₹14.7L @ 13.0% p.a. │ EMI ₹33,335/mo
-
- Personalization: "13-year loyal customer | Excellent credit (793)"
-```
-
-### Twilio WhatsApp Template — Quick-Reply Buttons
-
-```
-┌──────────────────────────────────────────────────────┐
-│  Hi Aaina! 🎉 You have been pre-approved for a       │
-│  Personal Loan:                                      │
-│                                                      │
-│  💰 Amount:  ₹19.1L                                  │
-│  📊 Rate:    10.5% p.a. (fixed)                      │
-│  💳 EMI:     ₹25,900/month                           │
-│  ⏰ Valid till: 31 May 2026                           │
-│                                                      │
-│  100% digital · No branch visit · Disbursal in 24h  │
-├──────────────────────────────────────────────────────┤
-│              ✅  Yes, Interested!                     │
-├──────────────────────────────────────────────────────┤
-│                  📞  Call Me                         │
-├──────────────────────────────────────────────────────┤
-│                  ❌  Not Now                          │
-└──────────────────────────────────────────────────────┘
-```
-
-### AI Sales Agent Reply — Tap ✅ Yes, get this:
-
-> *"That's great, Aaina! 🎉 Your Personal Loan for ₹19.1L at 10.5% p.a. is pre-approved. What time works best for a quick call — morning or afternoon? I'll have everything ready and we can complete the process in under 10 minutes."*
-
-### Tap 💰 price objection reply:
-
-> *"I hear you, Aaina! The EMI of ₹25,900 might look high upfront, but you can also choose a smaller amount and the EMI drops proportionally. Would a 7-year tenure work better for you? That brings the monthly down significantly."*
+1. **Parses** intent — extracts filters (segment, product, city, timeline)
+2. **Queries** the CRM database for matching customers
+3. **Scores** each customer with a CLV model + conversion probability engine
+4. **Detects life events** from transactions (wedding spend, salary jump, medical bills)
+5. **Drafts** personalized WhatsApp messages with real loan amounts, rates, and EMIs
+6. **Sends** via Twilio with interactive quick-reply buttons (✅ Yes / 📞 Call Me / ❌ Not Now)
+7. **Replies** automatically when customers respond — running a live AI sales agent
+8. **Tracks** every conversation in a pipeline (Contacted → Engaged → Interested → Converted)
 
 ---
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                   React + Vite  :8080                            │
-│  Workspace · Customers · Analytics · Conversations (live inbox)  │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │  REST
-┌────────────────────────────▼─────────────────────────────────────┐
-│                  FastAPI Backend  :8000                           │
-│                                                                  │
-│  /api/agent/run              LangGraph 4-node pipeline           │
-│  /api/outreach/send-batch    WhatsApp Web + Twilio dispatch      │
-│  /api/outreach/reply         WhatsApp Web inbound → AI agent     │
-│  /api/outreach/twilio-webhook  Button taps → TwiML reply         │
-│  /api/outreach/pipeline      Live funnel + conversation log      │
-└──────────┬────────────────────────────────────┬──────────────────┘
-           │                                    │
-┌──────────▼───────────┐            ┌───────────▼──────────────┐
-│  WhatsApp Web  :3001 │            │  Twilio Content API       │
-│  whatsapp-web.js     │            │  Template + 3 buttons     │
-│  QR session          │            │  Webhook → Cloudflare     │
-│  Free, own account   │            │  Tunnel → /twilio-webhook │
-└──────────┬───────────┘            └───────────┬──────────────┘
-           │                                    │
-           └────────────────┬───────────────────┘
-                            │
-┌───────────────────────────▼──────────────────────────────────────┐
-│                     SQLite  banking_crm.db                        │
-│  customers 500  │  transactions 8,569  │  interactions  592       │
-└──────────────────────────────────────────────────────────────────┘
-```
+```mermaid
+graph TB
+    subgraph Frontend["Frontend — React + TanStack Router"]
+        WS["RM AI Workspace\nNatural language queries"]
+        CB["Campaign Builder\n5-step guided flow"]
+        CV["Conversations Console\nWhatsApp-style threads"]
+        AN["Analytics Dashboard\nLive KPIs + charts"]
+        DA["Dashboard\nMorning digest + alerts"]
+    end
 
-### LangGraph Agent — 4 Nodes
+    subgraph Gateway["API Gateway — FastAPI"]
+        AG["/api/agent/stream\nSSE streaming endpoint"]
+        CP["/api/campaigns/preview\nLead scoring + ranking"]
+        SB["/api/outreach/send-batch\nBulk WhatsApp dispatch"]
+        TW["/api/outreach/twilio-webhook\nInbound reply handler"]
+        PL["/api/outreach/pipeline\nConversation threads"]
+    end
 
-```
-PLANNER   →  decomposes natural language query into task list
-EXECUTOR  →  per customer: predict_conversion → get_transactions → draft_message
-REFLECTOR →  loops until all tasks done
-RESPONDER →  synthesises answer with all results
+    subgraph Agent["LangGraph Agent — 4-node pipeline"]
+        PN["Planner Node\nTask decomposition"]
+        EN["Executor Node\nTool orchestration"]
+        RN["Reflector Node\nCompletion check"]
+        RS["Responder Node\nNL answer synthesis"]
+        PN --> EN --> RN
+        RN -->|more steps| EN
+        RN -->|done| RS
+    end
+
+    subgraph Tools["Tool Layer"]
+        QC["query_customers\nFiltered CRM lookup"]
+        SC["score_customer_value\nCLV + tier scoring"]
+        PC["predict_conversion_probability\nML heuristic model"]
+        LE["detect_life_events\nTransaction pattern analysis"]
+        BS["get_behavioral_signals\nSpend personality + timing"]
+        GT["get_transaction_summary\nCategory breakdown"]
+        DM["draft_outreach_message\nProduct-aware message builder"]
+    end
+
+    subgraph Data["Data Layer"]
+        DB[("SQLite CRM DB\nCustomers · Transactions\nInteractions · Products")]
+        IG[("Identity Graph\nPhone to Customer mapping")]
+        AU[("Audit Log\nCompliance trail")]
+    end
+
+    subgraph Outreach["Outreach Layer"]
+        TL["Twilio Content API\nQuick-reply buttons"]
+        WW["WhatsApp Web\nwwebjs Node service"]
+        SA["AI Sales Agent\nIntent to personalized reply"]
+        CF["Cloudflare Tunnel\nWebhook bridge"]
+    end
+
+    WS -->|SSE stream| AG
+    CB --> CP
+    CB --> SB
+    CV --> PL
+    AG --> Agent
+    CP --> Tools
+    Agent --> Tools
+    Tools --> Data
+    SB --> Outreach
+    TW --> SA
+    SA --> Tools
+    SA --> Data
+    CF -->|inbound| TW
+    TL --> CF
 ```
 
 ---
 
-## Key Engineering Decisions
+## Execution Flow
 
-**No placeholder hallucination.**
-Every interest rate is derived from the customer's credit score band. Every EMI is computed with the standard annuity formula `P·r(1+r)ⁿ / ((1+r)ⁿ−1)`. The LLM chooses tone — Python does the maths.
+### 1 — RM Query (Workspace)
 
-**Intent classifier without LLM.**
-Keyword matching handles 90% of replies in <1ms with zero API quota. Gemini/Ollama only fires for genuinely complex multi-turn conversations. This makes the sales agent fast, cheap, and reliable.
+```mermaid
+sequenceDiagram
+    participant RM as RM Browser
+    participant API as FastAPI SSE
+    participant LG as LangGraph Agent
+    participant T as Tool Layer
+    participant DB as SQLite DB
 
-**Sandbox session map.**
-In sandbox mode, all messages go to one test number. When that number replies, a session map routes the reply to the correct customer context. Solves the fundamental problem of testing WhatsApp outreach without messaging real customers.
+    RM->>API: POST query + llm_backend
+    API-->>RM: SSE node=planner running
+    LG->>LG: Planner — parse intent, build plan
+    API-->>RM: SSE node=planner done, plan=Query+Score+Draft
 
-**Dual delivery backends.**
-WhatsApp Web JS — free, uses own account, perfect for demos and small teams. Twilio Content API — production grade, pre-approved templates, quick-reply buttons, delivery receipts. Switch with one env var.
+    LG->>T: query_customers(segment, filters)
+    T->>DB: SELECT customers WHERE ...
+    DB-->>T: 50 customers
+    API-->>RM: SSE tool=query_customers count=50
+
+    LG->>T: score_customer_value x TOP_N
+    LG->>T: predict_conversion_probability
+    LG->>T: detect_life_events
+    LG->>T: get_transaction_summary
+    LG->>T: draft_outreach_message
+    T-->>LG: primary_message + conv_probability
+
+    LG->>LG: Responder — synthesize with real names and %
+    API-->>RM: SSE event=done, answer, customers, drafts
+    RM->>RM: Render chat + customer cards + draft previews
+```
+
+### 2 — Campaign Builder
+
+```mermaid
+flowchart LR
+    A["Configure\nProduct, Segment, City\nMin conv prob, Tone"] -->|POST /campaigns/preview| B["Score and Rank Leads\nCLV + conversion model\nLife event detection"]
+    B --> C["Review\nCheckbox select leads\nMessage previews"]
+    C -->|POST /outreach/send-batch| D["Dispatch\nTwilio Content API\nQuick-reply buttons"]
+    D --> E["Done\nConversations tracked\nDay 3/7/14 cadence queued"]
+```
+
+### 3 — WhatsApp Reply Loop
+
+```mermaid
+sequenceDiagram
+    participant C as Customer WhatsApp
+    participant TW as Twilio
+    participant CF as Cloudflare Tunnel
+    participant WH as Webhook Handler
+    participant SA as AI Sales Agent
+    participant DB as SQLite DB
+
+    C->>TW: Taps Yes Interested button
+    TW->>CF: POST webhook Body + From
+    CF->>WH: Forward to localhost:8000
+    WH->>DB: Lookup customer via IdentityGraph or sandbox session
+    WH->>SA: generate_sales_reply(customer, product, intent)
+    SA->>SA: detect_life_events inject hook\nget_behavioral_signals tone\nclassify intent template or LLM
+    SA-->>WH: Personalized reply text
+    WH->>DB: Log interaction pipeline_state=INTERESTED
+    WH-->>TW: TwiML Response Message
+    TW-->>C: AI reply on WhatsApp
+```
 
 ---
 
-## AI Sales Agent — Intent Classification
+## Tool Design & Usage
 
-| Intent | Triggers | Response strategy |
-|---|---|---|
-| `YES` | "yes", "interested", "haan", "ok sure" | Confirms offer, asks callback time |
-| `PRICE_OBJECTION` | "expensive", "high rate", "EMI" | Reframes as EMI, offers longer tenure |
-| `DOCUMENTS` | "document", "KYC", "what do I need" | Lists PAN/salary slips/Aadhaar, notes KYC pre-verified |
-| `TIMELINE` | "how long", "fast", "disbursal" | 24-hour digital process |
-| `WANTS_CALLBACK` | "call", "speak", "phone", "meet" | Morning vs afternoon preference |
-| `THINKING` | "maybe", "later", "will let you know" | No pressure, rate valid till month-end |
-| `HAS_PRODUCT` | "already have", "existing loan" | Fresh facility, different use case |
-| `NO` | "no", "nahi", "not interested" | Graceful exit, offer stays open |
-| `GENERAL` | anything else | Falls through to LLM (Gemini → Ollama) |
+Each tool is a **pure Python function** registered in `tool_registry.py`. The agent calls them by name with structured arguments. No tool has side effects beyond DB reads — outreach is handled separately.
+
+| Tool | Input | Output | Used By |
+|------|-------|--------|---------|
+| `query_customers` | segment, city, min_income, min_credit_score, has_credit_card, limit | `List[CustomerDict]` | Executor — query step |
+| `score_customer_value` | customer_id | `{score, tier, factors, weights}` | Executor — scoring step |
+| `predict_conversion_probability` | customer_id, product_id | `{probability, tone_hint, signals}` | Executor — draft step |
+| `detect_life_events` | customer_id | `[{event_type, confidence, evidence}]` | Campaign preview + Sales agent |
+| `get_behavioral_signals` | customer_id | `{spend_personality, best_contact_time, emi_risk}` | Sales agent personalization |
+| `get_transaction_summary` | customer_id, days | `{total_spend, categories, avg_monthly}` | Executor — draft step |
+| `recommend_products` | customer_id | `[{product_id, affinity_score, reasons}]` | Executor — optional step |
+| `draft_outreach_message` | customer_name, product_id, framework, tone, customer_id | `{primary_message, short_variant, offer_expiry}` | Executor — draft step |
+
+### Message Builder — Product-Aware Dispatch
+
+```mermaid
+flowchart TD
+    D["draft_outreach_message"] --> PT{product_type}
+    PT -->|personal_loan| PL["Real loan amount = min(income x 5, 25L)\nActual rate from credit score band\nEMI = reducing-balance formula"]
+    PT -->|credit_card| CC["Top spend category from txn data\nCashback hook, Zero fee Year 1\nLounge access CTA"]
+    PT -->|home_loan| HL["20-yr tenure, LTV 80%\nCity-aware property value estimate"]
+    PT -->|fd| FD["Balance x 0.5 invest amount\nCompound maturity projection"]
+    PL & CC & HL & FD --> V["validate_message_facts\nRate vs credit score band\nLoan vs 5x income cap"]
+    V --> OUT["primary_message + short_variant"]
+```
+
+### CLV Scoring Model
+
+```mermaid
+flowchart LR
+    subgraph Inputs
+        B["Monthly avg balance"]
+        I["Annual income"]
+        C["Credit score"]
+        R["Relationship years"]
+        P["Products not held"]
+        L["Life events detected"]
+    end
+    subgraph Weights["Segment-Adjusted Weights"]
+        W["Premium: balance 30% + income 25%\nAffluent: balance 25% + income 25%\nMass: income 30% + credit 30%"]
+    end
+    Inputs --> W --> S["CLV Score 0-100 + Tier"]
+```
+
+### Life Event Detection (7 signals)
+
+| Signal | Transaction Evidence |
+|--------|---------------------|
+| `WEDDING_LIKELY` | Jewellery + catering + venue spend spike |
+| `PROMOTION_LIKELY` | Salary > 1.3× last 3-month average |
+| `MEDICAL_EXPENSE` | Hospital / pharmacy spend > ₹50K |
+| `HAS_CHILDREN` | School / toys / pediatrics spend |
+| `TRAVEL_FREQUENT` | 3+ airline or hotel transactions/month |
+| `LIFESTYLE_SPENDER` | Luxury retail > 20% of spend |
+| `MEDICAL_LOAN_CANDIDATE` | Medical + low balance combo |
 
 ---
 
-## Tech Stack
+## Key Design Decisions
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 18, Vite, TanStack Router, Tailwind CSS, Framer Motion, Recharts |
-| **Backend** | FastAPI, Python 3.12, SQLAlchemy, Pydantic v2, Uvicorn |
-| **AI Agent** | LangGraph, custom tool registry, 4-node state machine |
-| **LLM** | Google Gemini 2.0 Flash · NVIDIA NIM (Llama 70B) · Ollama (local) |
-| **Database** | SQLite — 500 customers, 8,569 transactions, 592 interactions |
-| **WhatsApp (free)** | whatsapp-web.js, Puppeteer, Node.js Express |
-| **WhatsApp (prod)** | Twilio WhatsApp Business API, Content API v1 |
-| **Tunnel** | Cloudflare Tunnel — free public webhook URL |
+### 1. LangGraph 4-node pipeline over a single prompt
+Each node has one responsibility. The Executor loops (Reflector sends it back) until all plan steps are done — enabling multi-tool orchestration without prompt engineering tricks. SSE streaming makes each node visible to the RM in real time.
+
+### 2. Tool-first, LLM-second
+Every common intent (score, query, draft) is handled by a deterministic tool. The LLM is only called for planner reasoning and final response synthesis. This eliminates hallucinated loan amounts, rates, and EMIs.
+
+### 3. Product-aware message builders
+Four separate builder functions instead of one generic template. Credit cards need cashback hooks. Loans need real EMI calculations. A single template either leaves fields blank (`Amount: ₹—`) or gets filled with wrong product data.
+
+### 4. Sandbox session persistence via DB fallback
+In-memory `_sandbox_sessions` dict is fast but wipes on restart. On cold start the webhook falls back to querying the most recent outreach interaction from the DB, reconstructs context, and caches it — so button replies work immediately after a restart without re-sending messages.
+
+### 5. SSE streaming over polling
+`/api/agent/stream` emits node-level events as the LangGraph pipeline executes. Agent runs take 10–30 seconds — SSE gives the RM live feedback (`📋 Planning → ⚙️ Executing (50 customers) → ✍️ Synthesizing`) with no extra infrastructure.
+
+### 6. LLM provider cascade
+Gemini → Ollama → deterministic template fallback in the sales agent. If the API quota is exhausted or the network is down, the template still produces a correctly personalized reply with the customer's real name, product, and amounts.
+
+---
+
+## Trade-offs & Limitations
+
+| Area | Current approach | Trade-off |
+|------|-----------------|-----------|
+| **Database** | SQLite | Zero-config setup. Not suitable for multi-tenant or high-write production. Swap `DATABASE_URL` for Postgres. |
+| **Tunnel** | Cloudflare quick tunnel | URL changes on every restart — must re-update Twilio webhook manually. A named tunnel or reserved domain fixes this. |
+| **Conversion model** | Weighted heuristic (income, balance, credit score, life events) | No historical conversion labels so cannot train a real classifier. Designed to swap in an sklearn model when labels exist. |
+| **Session memory** | In-memory dict + DB fallback | Multi-process deploys (gunicorn workers) do not share the dict. Move to Redis for production. |
+| **Agent LLM calls** | 1–2 per run (planner + responder) | Executor is fully deterministic — zero LLM calls for tool dispatch. Efficient but less flexible for novel query types. |
+| **WhatsApp delivery** | Twilio sandbox | Requires customer opt-in to the sandbox number. Production needs approved message templates. |
+| **Personalization data** | Transaction history in local DB | Accuracy improves significantly with bureau data, behavioral telemetry, and longer history. |
+
+---
+
+## Setup & Run
+
+### Prerequisites
+
+| Requirement | Version |
+|------------|---------|
+| Python | 3.11+ |
+| Node.js | 18+ |
+| Git | any |
+| Ollama (optional) | latest |
+
+---
+
+### 1. Clone
+
+```bash
+git clone https://github.com/namanchitkara2/bankrm-ai.git
+cd bankrm-ai
+```
+
+### 2. Backend
+
+```bash
+cd backend
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+cp .env.example .env
+# Edit .env — set at least one LLM backend key
+```
+
+**Choose your LLM backend** in `.env`:
+
+```bash
+# Option A — Google Gemini (recommended, free tier available)
+LLM_BACKEND=gemini
+GEMINI_API_KEY=your_key          # https://aistudio.google.com/app/apikey
+
+# Option B — NVIDIA NIM (free credits, 70B model)
+LLM_BACKEND=nvidia
+NVIDIA_API_KEY=your_key          # https://build.nvidia.com
+
+# Option C — Ollama (fully local, no API key needed)
+LLM_BACKEND=ollama
+OLLAMA_MODEL=gemma3:4b           # run: ollama pull gemma3:4b
+```
+
+**Seed and start:**
+
+```bash
+python3 -m src.database          # creates banking_crm.db with synthetic data
+python3 -m uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 3. WhatsApp (optional — for real sending)
+
+**Option A — WhatsApp Web (free, scan QR):**
+```bash
+cd backend/whatsapp-service
+npm install && node server.js    # scan QR code in terminal
+```
+
+**Option B — Twilio (button replies, webhook):**
+```bash
+# In .env:
+SENDER_BACKEND=twilio
+TWILIO_ACCOUNT_SID=ACxxx
+TWILIO_AUTH_TOKEN=xxx
+TWILIO_PHONE_NUMBER=+14155238886
+TWILIO_WHATSAPP_CONTENT_SID=HXxxx
+
+# Expose webhook to internet
+cloudflared tunnel --url http://localhost:8000 --no-autoupdate
+# Paste *.trycloudflare.com URL into Twilio console:
+# Messaging > Sandbox > "When a message comes in" >
+#   https://xxx.trycloudflare.com/api/outreach/twilio-webhook
+```
+
+### 4. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev                      # http://localhost:5173
+```
+
+### 5. Verify
+
+```bash
+curl http://localhost:8000/api/health
+# {"status":"ok","timestamp":"..."}
+```
+
+Open **http://localhost:5173** and try:
+- **Dashboard** — morning digest, churn alerts, cross-sell opportunities
+- **RM AI Workspace** — type *"Find affluent customers for credit card and draft messages"*
+- **Campaign Builder** — Personal Loan → Find Best Leads → Review → Send
+- **Conversations** — click any contact to see the full WhatsApp thread
 
 ---
 
@@ -189,212 +381,58 @@ WhatsApp Web JS — free, uses own account, perfect for demos and small teams. T
 
 ```
 bankrm-ai/
-├── backend/                          # FastAPI + LangGraph agent
+├── backend/
 │   ├── src/
-│   │   ├── api.py                    # All REST endpoints (14 routes)
-│   │   ├── config.py                 # Pydantic settings
+│   │   ├── api.py                    # FastAPI routes — agent, campaigns, pipeline, webhook
 │   │   ├── database.py               # SQLAlchemy models
-│   │   ├── llm/                      # Gemini · Ollama · NVIDIA NIM
+│   │   ├── config.py                 # Pydantic settings from .env
+│   │   ├── rm_agent/
+│   │   │   ├── graph.py              # LangGraph graph assembly
+│   │   │   ├── nodes.py              # Planner, Executor, Reflector, Responder
+│   │   │   ├── state.py              # RMAgentState TypedDict
+│   │   │   └── tool_registry.py      # Tool name → function mapping
 │   │   ├── tools/
-│   │   │   ├── customer_tool.py      # query, profile
-│   │   │   ├── transaction_tool.py   # 90-day spend analysis
-│   │   │   ├── scoring_tool.py       # CLV + conversion probability
-│   │   │   ├── message_tool.py       # Real EMI, rate, personalisation
-│   │   │   ├── outreach_tool.py      # WhatsApp Web + Twilio dispatch
-│   │   │   └── sales_agent.py        # AI sales agent — intent + reply
-│   │   └── rm_agent/
-│   │       ├── nodes.py              # Planner, Executor, Reflector, Responder
-│   │       ├── graph.py              # LangGraph StateGraph
-│   │       └── tool_registry.py      # Tool schemas + execute_tool()
-│   ├── whatsapp-service/
-│   │   └── server.js                 # Node.js WhatsApp Web bridge
-│   ├── data/seed_db.py               # Seeds 500 customers + transactions
+│   │   │   ├── customer_tool.py      # query_customers
+│   │   │   ├── scoring_tool.py       # score_customer_value, detect_life_events
+│   │   │   ├── message_tool.py       # draft_outreach_message, product builders
+│   │   │   ├── outreach_tool.py      # send_outreach_message, Twilio integration
+│   │   │   ├── sales_agent.py        # generate_sales_reply, intent classifier
+│   │   │   ├── transaction_tool.py   # get_transaction_summary
+│   │   │   └── product_tool.py       # recommend_products
+│   │   └── llm/
+│   │       ├── base.py               # LLMProvider abstract class
+│   │       ├── gemini.py             # Google Gemini
+│   │       ├── nvidia.py             # NVIDIA NIM
+│   │       └── ollama.py             # Local Ollama
+│   ├── whatsapp-service/             # Node.js wwebjs WhatsApp bridge
 │   ├── requirements.txt
 │   └── .env.example
-│
-├── frontend/                         # React + Vite dashboard
-│   └── src/
-│       ├── lib/api.ts                # Typed API client
-│       └── components/pages/
-│           ├── WorkspacePage.tsx     # Agent chat + Send modal
-│           ├── ConversationsPage.tsx # Live WhatsApp inbox
-│           ├── CustomersPage.tsx     # Customer browser
-│           └── AnalyticsPage.tsx     # KPIs + charts
-│
-├── .gitignore
-├── LICENSE
+├── frontend/
+│   ├── src/
+│   │   ├── components/pages/
+│   │   │   ├── WorkspacePage.tsx     # RM AI chat + live SSE workflow rail
+│   │   │   ├── CampaignPage.tsx      # 5-step campaign builder
+│   │   │   ├── ConversationsPage.tsx # WhatsApp thread viewer + pipeline
+│   │   │   ├── DashboardPage.tsx     # Morning digest + churn + cross-sell
+│   │   │   └── AnalyticsPage.tsx     # Live KPIs + Recharts
+│   │   └── lib/api.ts                # Typed API client
+│   └── package.json
 └── README.md
 ```
 
 ---
 
-## Quick Start
+## Tech Stack
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- [Gemini API key](https://aistudio.google.com/app/apikey) (free)
-
-### 1. Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-
-cp .env.example .env
-# Edit .env — add your GEMINI_API_KEY
-
-python data/seed_db.py          # seeds 500 customers + 8,569 transactions
-python -m uvicorn src.api:app --port 8000 --reload
-```
-
-### 2. WhatsApp Web Bridge (free sender)
-
-```bash
-cd backend/whatsapp-service
-npm install
-node server.js
-# Open http://localhost:3001
-# Scan QR with WhatsApp → Linked Devices
-# Session saves — no re-scan needed next time
-```
-
-### 3. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Opens http://localhost:8080
-```
-
-### 4. Twilio Webhook (for button-tap AI replies)
-
-```bash
-# Free tunnel — no account needed
-brew install cloudflare/cloudflare/cloudflared
-cloudflared tunnel --url http://localhost:8000
-
-# Copy the https://xxx.trycloudflare.com URL
-# Paste into: https://console.twilio.com → WhatsApp Sandbox → "When a message comes in"
-```
-
----
-
-## Configuration
-
-Copy `backend/.env.example` to `backend/.env` and fill in:
-
-```bash
-# Which LLM to use (pick one)
-LLM_BACKEND=gemini
-GEMINI_API_KEY=your_key_here          # aistudio.google.com/app/apikey
-
-# Which sender to use (pick one)
-SENDER_BACKEND=whatsapp-web           # free — or 'twilio' for production
-
-# Sandbox: all messages go to YOUR number (safe for testing)
-WHATSAPP_SANDBOX=true
-WHATSAPP_SANDBOX_NUMBER=+91XXXXXXXXXX
-
-# Twilio (optional — for rich templates + buttons)
-TWILIO_ACCOUNT_SID=ACxxx
-TWILIO_AUTH_TOKEN=xxx
-TWILIO_PHONE_NUMBER=+14155238886
-```
-
----
-
-## API Reference
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/agent/run` | Run LangGraph agent on a natural language query |
-| `GET` | `/api/customers` | Filter customers by segment, city, income, credit score |
-| `GET` | `/api/customers/{id}/score` | CLV score + contributing factors |
-| `GET` | `/api/customers/{id}/recommendations` | Product recommendations + affinity scores |
-| `POST` | `/api/outreach/send-batch` | Send messages via WhatsApp Web or Twilio |
-| `POST` | `/api/outreach/reply` | WhatsApp Web inbound → AI sales agent |
-| `POST` | `/api/outreach/twilio-webhook` | Twilio button taps → AI agent → TwiML |
-| `GET` | `/api/outreach/pipeline` | Funnel stages + live conversation log |
-| `GET` | `/api/outreach/whatsapp-status` | Connection status + QR code |
-| `GET` | `/api/analytics/kpis` | Dashboard KPIs |
-| `GET` | `/api/analytics/charts` | Segment breakdown, conversion trend |
-
----
-
-## Scoring Engine
-
-### Customer Lifetime Value (rule-based for auditability)
-
-```
-score = 0.20 × norm(annual_income)
-      + 0.20 × norm(monthly_avg_balance)
-      + 0.15 × tenure_years / 20
-      + 0.15 × products_held / 4
-      + 0.20 × norm(credit_score)
-      + 0.10 × kyc_verified_bonus
-
-Tier:  High Value ≥ 75  |  Medium 50–75  |  Standard < 50
-```
-
-### Conversion Probability (9 behavioral signals)
-
-| Signal | Boost |
-|---|---|
-| Customer doesn't own the product | +25% |
-| Monthly balance > ₹5L | +20% |
-| Credit score ≥ 750 | +15% |
-| Tenure ≥ 5 years | +10% |
-| Active transactions last 30 days | +5% |
-| Salary credited this month | +8% |
-| Spending spike ≥ 20% | +10% |
-| **Already owns the product** | **×0.05 (early exit)** |
-
-Probability drives tone: ≥ 40% → warm · 15–40% → professional · < 15% → urgent
-
----
-
-## Sales Pipeline
-
-```
-NEW → CONTACTED → ENGAGED → CONSIDERING → CALLBACK_REQUESTED → INTERESTED
-                                                   ↓
-                                    OBJECTION ← ─ ─ ─ ─ ─ ─ ─ ┘
-                                       ↓
-                                   DECLINED            CONVERTED / WON
-```
-
-Every stage transition is an `Interaction` row in the DB.
-Every AI reply is logged with `framework_used = "AI_AGENT"`.
-
----
-
-## What's Next
-
-- [ ] **Follow-up cadence** — Day 0/3/7/14/30 auto-sequence
-- [ ] **Life event detection** — medical expense, school fees, salary jump → smarter hooks
-- [ ] **PostgreSQL** — production-grade, concurrent multi-RM campaigns
-- [ ] **Conversation memory** — AI references what it said in prior sessions
-- [ ] **A/B testing** — which variant drives more replies, auto-promoted after 200 sends
-- [ ] **Morning digest** — push notification: "3 hot leads replied overnight"
-- [ ] **Twilio Voice** — AI phone calls for CALLBACK_REQUESTED leads
-- [ ] **HubSpot CRM sync** — two-way pipeline updates
-- [ ] **Fine-tuned intent model** — trained on real banking conversation outcomes
-- [ ] **Multi-language** — Hindi, Tamil, Marathi message generation
-
----
-
-## License
-
-MIT © [Naman Chitkara](https://github.com/namanchitkara)
-
----
-
-<div align="center">
-
-Built with 🧠 LangGraph · ⚡ FastAPI · 💬 WhatsApp · 🤖 Gemini
-
-*If this gave you ideas, star it ⭐ and let's connect on [LinkedIn](https://linkedin.com/in/namanchitkara)*
-
-</div>
+| Layer | Technology |
+|-------|-----------|
+| Agent orchestration | LangGraph 4-node pipeline |
+| LLM backends | Google Gemini · NVIDIA NIM · Ollama |
+| API server | FastAPI + Server-Sent Events |
+| Database | SQLite via SQLAlchemy ORM |
+| Frontend | React 18 + TanStack Router + Tailwind CSS |
+| UI components | shadcn/ui |
+| Charts | Recharts |
+| Animations | Framer Motion |
+| WhatsApp | Twilio Content API · WhatsApp Web (wwebjs) |
+| Tunnel | Cloudflare quick tunnel |
