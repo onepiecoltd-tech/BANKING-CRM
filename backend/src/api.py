@@ -971,12 +971,12 @@ async def twilio_webhook(request: Request):
                     outreach_msg = last_outreach.message or ""
                     customer = session.query(Customer).filter_by(customer_id=customer_id).first()
                     _log.warning(f"[WEBHOOK] Sandbox fallback → customer={customer_id} ({customer.name if customer else '?'})")
-                    # Rebuild in-memory session so subsequent replies are fast
-                    _sandbox_sessions[raw_phone] = {
+                    # Rebuild in-memory session as a LIST (queue) so subsequent replies work
+                    _sandbox_sessions[raw_phone] = [{
                         "customer_id": customer_id,
                         "product_id":  product_id,
                         "message":     outreach_msg,
-                    }
+                    }]
                 else:
                     customer = None
                     customer_id = product_id = None

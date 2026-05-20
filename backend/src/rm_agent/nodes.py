@@ -60,9 +60,12 @@ _SCORE_KW   = ("score", "rank", "value", "top", "best", "priorit", "evaluat", "h
 _DRAFT_KW   = ("draft", "message", "outreach", "email", "sms", "contact", "write", "re-engage", "reach")
 _SEGMENT_KW = ("premium", "affluent", "mass", "dormant", "inactive")
 
-
 _CONVERT_KW = ("convert", "re-engage", "re engage", "win back", "reactivate",
-               "likely to", "outreach", "campaign", "reach out")
+               "likely to", "outreach", "campaign", "reach out",
+               # product intent — user is looking for outreach candidates
+               "personal loan", "credit card", "home loan", "fixed deposit",
+               "might be", "potential", "interested", "taking loan",
+               "offer", "pitch", "target", "sell")
 
 
 def _infer_plan(query: str) -> list[str] | None:
@@ -89,10 +92,17 @@ _CITY_RE = re.compile(
 )
 _MIN_BAL_RE = re.compile(r"balance[^\d]*(\d[\d,]*)", re.I)
 _MIN_CREDIT_RE = re.compile(
-    r"credit score[^\d\s]*\s*(?:above|over|greater than|>|atleast|at least)?\s*(\d{3})", re.I
+    # Matches: "credit score above 700", "CIBIL score 700+", "600+ CIBIL", "cibil > 750"
+    r"(?:"
+    r"(?:credit\s*score|cibil)[^\d]*(\d{3})"           # "credit score 700" / "CIBIL 700"
+    r"|(\d{3})\s*\+?\s*(?:credit\s*score|cibil)"       # "700+ CIBIL" / "700 cibil"
+    r"|(\d{3})\s*\+\s*(?:score|cibil|credit)"          # "700+ score"
+    r")",
+    re.I,
 )
 _MIN_INCOME_RE = re.compile(r"income[^\d]*(\d[\d,]*)", re.I)
 _MIN_REL_RE = re.compile(r"(\d+)\+?\s*year", re.I)
+_TOP_N_RE = re.compile(r"top\s*(\d+)|(\d+)\s*(?:customers?|results?|leads?)", re.I)
 
 
 def _extract_query_args(query: str) -> dict:
@@ -126,10 +136,12 @@ def _extract_query_args(query: str) -> dict:
     if bal_m:
         args["min_balance"] = int(bal_m.group(1).replace(",", ""))
 
-    # Credit score threshold
+    # Credit score threshold — try all capture groups (regex has 3 alternates)
     credit_m = _MIN_CREDIT_RE.search(query)
     if credit_m:
-        args["min_credit_score"] = int(credit_m.group(1))
+        score_val = next((g for g in credit_m.groups() if g is not None), None)
+        if score_val:
+            args["min_credit_score"] = int(score_val)
 
     # Income threshold
     income_m = _MIN_INCOME_RE.search(query)
@@ -159,6 +171,13 @@ def _extract_query_args(query: str) -> dict:
     if rel_m and "year" in q:
         args["min_relationship_years"] = int(rel_m.group(1))
 
+    # Top-N — "top 5", "5 customers", "give me 10 leads" etc.
+    top_m = _TOP_N_RE.search(query)
+    if top_m:
+        n = next((g for g in top_m.groups() if g is not None), None)
+        if n:
+            args["limit"] = int(n)
+
     return args
 
 
@@ -172,15 +191,16 @@ _PRODUCT_KW_MAP = [
     (("fixed deposit", "fd", "deposit"),  "FD001"),
     (("loan",),                           "PL001"),  # generic "loan" → personal loan
 ]
-_DEFAULT_PRODUCT = "CC001"
+_DEFAULT_PRODUCT = None  # None = no product context — don't assume one
 
 
-def _pick_product(query: str) -> str:
+def _pick_product(query: str) -> str | None:
+    """Return a product ID if the query mentions one, else None."""
     q = query.lower()
     for kws, pid in _PRODUCT_KW_MAP:
         if any(k in q for k in kws):
             return pid
-    return _DEFAULT_PRODUCT
+    return _DEFAULT_PRODUCT  # None — caller must handle gracefully
 
 
 # ── Tool runner (shared by all shortcuts) ─────────────────────────────────────
@@ -300,12 +320,15 @@ def executor_node(state: RMAgentState) -> RMAgentState:
 
     step = state["task_plan"][state["current_plan_step"]].lower()
     query = state["user_query"]
-    product_id = _pick_product(query)
+    product_id = _pick_product(query) or "PL001"  # safe fallback only for scoring/drafting
 
     # ── Query customers ───────────────────────────────────────────────────────
     query_kw = ("query", "find", "fetch", "search", "list", "identify", "show", "get")
     if any(k in step for k in query_kw):
         args = _extract_query_args(query)
+        # Store requested top-N so scorer/drafter can respect it
+        if "limit" in args:
+            state["requested_top_n"] = args["limit"]
         _run_tool(state, "query_customers", args)
         state["current_plan_step"] += 1
         return state
@@ -313,10 +336,11 @@ def executor_node(state: RMAgentState) -> RMAgentState:
     # ── Score customers ───────────────────────────────────────────────────────
     score_kw = ("score", "value", "rank", "priorit", "evaluat", "assess")
     if any(k in step for k in score_kw) and state["customer_set"]:
+        n = state.get("requested_top_n", TOP_N)
         to_score = [
             c for c in state["customer_set"]
             if c["customer_id"] not in state["scores_cache"]
-        ][:TOP_N]
+        ][:n]
         for c in to_score:
             _run_tool(state, "score_customer_value", {"customer_id": c["customer_id"]})
         state["current_plan_step"] += 1
@@ -329,14 +353,15 @@ def executor_node(state: RMAgentState) -> RMAgentState:
     #   3. draft_outreach_message          → real loan amounts / EMIs
     draft_kw = ("draft", "message", "outreach", "email", "sms", "contact", "write", "send")
     if any(k in step for k in draft_kw) and state["customer_set"]:
+        n = state.get("requested_top_n", TOP_N)
         if state["scores_cache"]:
             target_ids = sorted(
                 state["scores_cache"],
                 key=lambda cid: state["scores_cache"][cid].get("score", 0),
                 reverse=True,
-            )[:TOP_N]
+            )[:n]
         else:
-            target_ids = [c["customer_id"] for c in state["customer_set"][:TOP_N]]
+            target_ids = [c["customer_id"] for c in state["customer_set"][:n]]
 
         id_map = {c["customer_id"]: c for c in state["customer_set"]}
         drafted = {d["customer_id"] for d in state["drafts"]}

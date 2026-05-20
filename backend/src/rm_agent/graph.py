@@ -80,6 +80,7 @@ def create_initial_state(
         conversation_history=[{"role": "user", "content": user_query}],
         drafts=[],
         tool_call_log=[],
+        requested_top_n=None,
         final_answer=None,
         error=None,
     )

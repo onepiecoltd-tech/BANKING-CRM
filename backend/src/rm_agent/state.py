@@ -57,6 +57,9 @@ class RMAgentState(TypedDict):
     # Tool execution trace
     tool_call_log: List[ToolCall]
     
+    # Top-N request (extracted from query, e.g. "top 5 customers")
+    requested_top_n: Optional[int]
+
     # Final response
     final_answer: Optional[str]
     error: Optional[str]
