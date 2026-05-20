@@ -47,9 +47,10 @@ _llm_semaphore = asyncio.Semaphore(1)
 
 # Sandbox session map: phone_number → {customer_id, product_id, message}
 # When sandbox mode is on, all messages go to the RM's own number.
-# We need to remember which customer context to use when that number replies.
-# Stores the LAST sent customer per sandbox number (most recent wins).
-_sandbox_sessions: dict = {}   # "+917838146286" → {"customer_id": ..., "product_id": ..., "message": ...}
+# Sandbox session routing: maps sandbox phone → list of pending customers (FIFO queue).
+# Each entry: {"customer_id": ..., "product_id": ..., "message": ...}
+# When a reply arrives we pick the first customer who hasn't had a TWILIO_INBOUND interaction yet.
+_sandbox_sessions: dict = {}   # "+917838146286" → [{"customer_id":..., "product_id":..., "message":...}, ...]
 
 @app.on_event("startup")
 def startup():
@@ -387,13 +388,16 @@ def send_batch(body: SendBatchRequest):
                 framework_used=item.framework,
             )
 
-            # Register sandbox session for AI reply routing
+            # Register sandbox session for AI reply routing (queue — one slot per customer)
             if body.sandbox:
-                _sandbox_sessions[effective_sandbox_number] = {
-                    "customer_id": item.customer_id,
-                    "product_id":  item.product_id,
-                    "message":     item.message,
-                }
+                queue = _sandbox_sessions.setdefault(effective_sandbox_number, [])
+                # Avoid duplicates if re-sending to same customer
+                if not any(s["customer_id"] == item.customer_id for s in queue):
+                    queue.append({
+                        "customer_id": item.customer_id,
+                        "product_id":  item.product_id,
+                        "message":     item.message,
+                    })
 
             results.append({
                 "customer_id":    item.customer_id,
@@ -711,9 +715,22 @@ def incoming_reply(body: IncomingReplyRequest):
     """
     session = SessionLocal()
     try:
-        # 1. Look up customer — check sandbox session map first
+        # 1. Look up customer — check sandbox session queue first
         #    (in sandbox mode the reply comes from the RM's own number, not the customer's)
-        sandbox_ctx = _sandbox_sessions.get(body.phone)
+        sandbox_queue = _sandbox_sessions.get(body.phone)
+        sandbox_ctx = None
+        if sandbox_queue:
+            # Pick first customer in queue who hasn't replied yet
+            for entry in sandbox_queue:
+                already = session.query(Interaction).filter(
+                    Interaction.customer_id == entry["customer_id"],
+                    Interaction.framework_used == "TWILIO_INBOUND",
+                ).first()
+                if not already:
+                    sandbox_ctx = entry
+                    break
+            if not sandbox_ctx:
+                sandbox_ctx = sandbox_queue[-1]
 
         if sandbox_ctx:
             # Sandbox reply — use stored customer context
@@ -831,15 +848,21 @@ async def twilio_webhook(request: Request):
     with TwiML so Twilio sends the AI message back to the customer.
     """
     form = await request.form()
+
+    # Log all incoming fields for debugging
+    import logging as _log
+    _log.warning(f"[WEBHOOK] form fields: { {k: v for k,v in form.items()} }")
+
     raw_phone = str(form.get("From", "")).replace("whatsapp:", "").strip()
     body_text  = str(form.get("Body", "")).strip()
-    button_id  = str(form.get("ButtonText", "")).strip()   # quick-reply button id
+    button_id  = str(form.get("ButtonText", "") or form.get("ButtonPayload", "")).strip()
 
     # Prefer button id for intent classification (cleaner signal)
     message_text = button_id if button_id else body_text
     if not message_text:
-        return Response(content='<?xml version="1.0"?><Response></Response>',
-                        media_type="application/xml")
+        _log.warning(f"[WEBHOOK] Empty message_text — phone={raw_phone} body={body_text!r} button={button_id!r}")
+        # Last resort: treat any inbound as a greeting so we still reply
+        message_text = "hello"
 
     # Map button labels to intent-friendly text
     BUTTON_MAP = {
@@ -860,12 +883,29 @@ async def twilio_webhook(request: Request):
         from src.tools.sales_agent import generate_sales_reply as _gen_reply
         from src.database import Product
 
-        sandbox_ctx = _sandbox_sessions.get(raw_phone)
+        # _sandbox_sessions is now a list (queue). Pick the first customer who hasn't
+        # received a TWILIO_INBOUND interaction yet (i.e. hasn't replied before).
+        sandbox_queue = _sandbox_sessions.get(raw_phone)
+        sandbox_ctx = None
+        if sandbox_queue:
+            for entry in sandbox_queue:
+                already_replied = session.query(Interaction).filter(
+                    Interaction.customer_id == entry["customer_id"],
+                    Interaction.framework_used == "TWILIO_INBOUND",
+                ).first()
+                if not already_replied:
+                    sandbox_ctx = entry
+                    break
+            # If all customers have replied, fall back to the last one in queue
+            if not sandbox_ctx:
+                sandbox_ctx = sandbox_queue[-1]
+
         if sandbox_ctx:
             customer_id = sandbox_ctx["customer_id"]
             product_id  = sandbox_ctx["product_id"]
             outreach_msg = sandbox_ctx["message"]
             customer = session.query(Customer).filter_by(customer_id=customer_id).first()
+            _log.warning(f"[WEBHOOK] Session queue match → {customer_id}")
         else:
             # In-memory session map was lost (restart / new process).
             # Strategy 1: check if this phone matches a real customer in IdentityGraph
@@ -884,8 +924,20 @@ async def twilio_webhook(request: Request):
                 customer_id  = customer.customer_id if customer else None
             else:
                 # Strategy 2 (sandbox fallback): raw_phone is the RM/sandbox number.
-                # Find the customer with the most recent outreach interaction so the
-                # RM can test the reply flow even after a backend restart.
+                # In sandbox, all outreach goes to the RM's own phone via Twilio test number.
+                # Priority: pick the most recently contacted customer who has NOT yet replied
+                # (no INTERESTED/DECLINED/ENGAGED etc. follow-on interaction logged).
+                # This avoids picking a customer who was already processed in a previous test.
+                from sqlalchemy import not_, exists
+                replied_subq = (
+                    session.query(Interaction.customer_id)
+                    .filter(
+                        Interaction.channel == "whatsapp",
+                        Interaction.pipeline_state.notin_(["CONTACTED"]),
+                        Interaction.framework_used.in_(["TWILIO_INBOUND", "AI_AGENT"]),
+                    )
+                    .subquery()
+                )
                 last_outreach = (
                     session.query(Interaction)
                     .filter(
@@ -894,15 +946,31 @@ async def twilio_webhook(request: Request):
                         Interaction.message != None,
                         Interaction.message != "",
                         Interaction.message != "Outreach message about product",
+                        ~Interaction.customer_id.in_(replied_subq),
                     )
                     .order_by(Interaction.date.desc())
                     .first()
                 )
+                # If everyone has replied already, just fall back to absolute most recent
+                if not last_outreach:
+                    last_outreach = (
+                        session.query(Interaction)
+                        .filter(
+                            Interaction.channel == "whatsapp",
+                            Interaction.pipeline_state == "CONTACTED",
+                            Interaction.message != None,
+                            Interaction.message != "",
+                            Interaction.message != "Outreach message about product",
+                        )
+                        .order_by(Interaction.date.desc())
+                        .first()
+                    )
                 if last_outreach:
                     customer_id  = last_outreach.customer_id
                     product_id   = last_outreach.product_offered
                     outreach_msg = last_outreach.message or ""
                     customer = session.query(Customer).filter_by(customer_id=customer_id).first()
+                    _log.warning(f"[WEBHOOK] Sandbox fallback → customer={customer_id} ({customer.name if customer else '?'})")
                     # Rebuild in-memory session so subsequent replies are fast
                     _sandbox_sessions[raw_phone] = {
                         "customer_id": customer_id,
@@ -993,11 +1061,12 @@ async def twilio_webhook(request: Request):
         _from = settings.twilio_phone_number
         _wa_from = f"whatsapp:{_from}" if not _from.startswith("whatsapp:") else _from
         _wa_to   = f"whatsapp:{raw_phone}" if not raw_phone.startswith("whatsapp:") else raw_phone
-        _tw.messages.create(from_=_wa_from, to=_wa_to, body=ai_reply)
+        _log.warning(f"[WEBHOOK] Sending Twilio reply to {_wa_to} from {_wa_from}: {ai_reply[:80]!r}")
+        _sent = _tw.messages.create(from_=_wa_from, to=_wa_to, body=ai_reply)
+        _log.warning(f"[WEBHOOK] Twilio send OK — SID={_sent.sid} status={_sent.status}")
     except Exception as _e:
         # Log but don't crash — still return empty TwiML so Twilio doesn't retry
-        import logging
-        logging.getLogger("bankrm").warning(f"Twilio reply send failed: {_e}")
+        _log.warning(f"[WEBHOOK] Twilio reply send FAILED: {_e}")
 
     # Return empty TwiML (reply already sent via outbound API above)
     return Response(content='<?xml version="1.0"?><Response></Response>',
@@ -1285,6 +1354,37 @@ def preview_campaign(req: CampaignRequest):
                 "tone": req.tone,
             },
         }
+    finally:
+        session.close()
+
+
+# ── Campaign: AI Message Compose (single customer) ────────────────────────────
+
+class ComposeRequest(BaseModel):
+    customer_id: str
+    product_id: str
+    tone: str = "warm"
+
+@app.post("/api/campaigns/compose")
+def compose_message(req: ComposeRequest):
+    """
+    Generate (or regenerate) an AI outreach message for a single customer.
+    Called by Campaign Builder when the RM clicks ✨ Regenerate on a lead card.
+    """
+    from src.tools.message_tool import draft_outreach_message
+
+    session = SessionLocal()
+    try:
+        customer = session.query(Customer).filter_by(customer_id=req.customer_id).first()
+        if not customer:
+            raise HTTPException(404, f"Customer {req.customer_id} not found")
+
+        draft = draft_outreach_message(
+            customer.name, req.product_id, "AIDA", req.tone,
+            customer_id=req.customer_id,
+        )
+        message = draft.get("primary_message", "") or draft.get("short_variant", "")
+        return {"message": message, "customer_id": req.customer_id}
     finally:
         session.close()
 

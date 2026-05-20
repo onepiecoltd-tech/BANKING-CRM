@@ -18,6 +18,10 @@ import {
   Users,
   Target,
   Zap,
+  Pencil,
+  Sparkles,
+  Phone,
+  FlaskConical,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -151,24 +155,55 @@ function LeadCard({
   lead,
   checked,
   onToggle,
+  productId,
+  tone,
+  onMessageChange,
 }: {
   lead: CampaignLead;
   checked: boolean;
   onToggle: () => void;
+  productId: string;
+  tone: string;
+  onMessageChange: (customerId: string, msg: string) => void;
 }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [editedMsg, setEditedMsg] = useState(lead.message_preview);
+  const [regenerating, setRegeneration] = useState(false);
+
+  async function handleRegenerate(e: React.MouseEvent) {
+    e.stopPropagation();
+    setRegeneration(true);
+    try {
+      const res = await fetch("/api/campaigns/compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customer_id: lead.customer_id, product_id: productId, tone }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const newMsg = data.message || editedMsg;
+        setEditedMsg(newMsg);
+        onMessageChange(lead.customer_id, newMsg);
+      }
+    } finally {
+      setRegeneration(false);
+    }
+  }
+
+  function handleMsgChange(val: string) {
+    setEditedMsg(val);
+    onMessageChange(lead.customer_id, val);
+  }
+
   return (
     <Card
-      className={`p-4 border transition-all cursor-pointer hover:shadow-md ${
+      className={`p-4 border transition-all ${
         checked ? "border-primary/40 bg-card" : "border-border/50 opacity-60"
       }`}
-      onClick={onToggle}
     >
       <div className="flex items-start gap-3">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className="mt-0.5 shrink-0"
         >
           {checked ? (
@@ -181,15 +216,9 @@ function LeadCard({
         <div className="flex-1 min-w-0">
           {/* Header row */}
           <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="font-semibold text-sm">{lead.name}</span>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-              {lead.city}
-            </Badge>
-            <span
-              className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full border ${probColor(
-                lead.conversion_probability
-              )}`}
-            >
+            <span className="font-semibold text-sm cursor-pointer" onClick={onToggle}>{lead.name}</span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{lead.city}</Badge>
+            <span className={`ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full border ${probColor(lead.conversion_probability)}`}>
               {lead.conversion_probability}% likely
             </span>
           </div>
@@ -210,10 +239,7 @@ function LeadCard({
           {lead.life_events.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {lead.life_events.map((evt) => (
-                <span
-                  key={evt}
-                  className="text-[10px] bg-muted/60 px-2 py-0.5 rounded-full border border-border/60"
-                >
+                <span key={evt} className="text-[10px] bg-muted/60 px-2 py-0.5 rounded-full border border-border/60">
                   {LIFE_EVENT_EMOJI[evt] ?? "📌"}{" "}
                   {evt.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
                 </span>
@@ -227,10 +253,49 @@ function LeadCard({
             Timing: <span className="capitalize font-medium">{lead.timing_label}</span>
           </div>
 
-          {/* Message preview */}
-          <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 italic break-words overflow-hidden">
-            "{lead.message_preview.slice(0, 120)}{lead.message_preview.length > 120 ? "…" : ""}"
-          </p>
+          {/* Message composer */}
+          <div className="mt-2 border border-border/40 rounded-lg overflow-hidden">
+            {/* Composer header */}
+            <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/30 border-b border-border/40">
+              <MessageCircle className="w-3 h-3 text-primary/70" />
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex-1">WhatsApp Message</span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setEditOpen((v) => !v); }}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Pencil className="w-2.5 h-2.5" />
+                {editOpen ? "Close" : "Edit"}
+              </button>
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors disabled:opacity-50"
+              >
+                {regenerating ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-2.5 h-2.5" />
+                )}
+                {regenerating ? "Writing…" : "✨ Regenerate"}
+              </button>
+            </div>
+
+            {/* Message body — editable or preview */}
+            {editOpen ? (
+              <textarea
+                value={editedMsg}
+                onChange={(e) => handleMsgChange(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                rows={6}
+                className="w-full bg-transparent px-3 py-2 text-[11px] leading-relaxed font-mono text-foreground/90 outline-none resize-none"
+                placeholder="Enter WhatsApp message…"
+              />
+            ) : (
+              <p className="px-3 py-2 text-[11px] text-muted-foreground leading-relaxed italic break-words line-clamp-3">
+                "{editedMsg.slice(0, 160)}{editedMsg.length > 160 ? "…" : ""}"
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </Card>
@@ -255,6 +320,12 @@ export function CampaignPage() {
   const [preview, setPreview] = useState<CampaignPreviewResponse | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // Custom (edited/regenerated) messages keyed by customer_id
+  const [customMessages, setCustomMessages] = useState<Record<string, string>>({});
+
+  // Sandbox
+  const [sandbox, setSandbox] = useState(true);
+  const [sandboxNumber, setSandboxNumber] = useState("+917838146286");
 
   // Derived
   const selectedProduct = PRODUCTS.find((p) => p.id === productId)!;
@@ -305,14 +376,15 @@ export function CampaignPage() {
           drafts: leads.map((l) => ({
             customer_id: l.customer_id,
             customer_name: l.name,
-            phone_number: "",          // backend uses sandbox number or CRM phone
-            message: l.message_preview || `Hi ${l.name.split(" ")[0]}! Your personalized offer for ${preview.product_name} is ready. Reply YES to learn more.`,
+            phone_number: sandbox ? sandboxNumber : "",
+            message: customMessages[l.customer_id] || l.message_preview ||
+              `Hi ${l.name.split(" ")[0]}! Your personalized offer for ${preview.product_name} is ready. Reply YES to learn more.`,
             product_id: productId,
             framework: "AIDA",
           })),
-          sandbox: false,
-          sandbox_number: "",
-          sender_backend: "whatsapp",
+          sandbox,
+          sandbox_number: sandbox ? sandboxNumber : "",
+          sender_backend: "twilio",   // use Twilio for reliable delivery
         }),
       });
     } catch {
@@ -326,6 +398,7 @@ export function CampaignPage() {
     setPreview(null);
     setSelected(new Set());
     setError(null);
+    setCustomMessages({});
   }
 
   function toggleLead(id: string) {
@@ -575,29 +648,72 @@ export function CampaignPage() {
                   lead={lead}
                   checked={selected.has(lead.customer_id)}
                   onToggle={() => toggleLead(lead.customer_id)}
+                  productId={productId}
+                  tone={tone}
+                  onMessageChange={(cid, msg) =>
+                    setCustomMessages((prev) => ({ ...prev, [cid]: msg }))
+                  }
                 />
               ))}
             </div>
 
             {/* Action bar */}
-            <div className="sticky bottom-4 glass-strong border border-border rounded-xl px-5 py-4 flex items-center gap-4 shadow-xl">
-              <button
-                onClick={() => setStep("configure")}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Reconfigure
-              </button>
-              <div className="flex-1" />
-              <Button
-                size="lg"
-                onClick={handleSend}
-                disabled={selectedCount === 0}
-                className="gradient-primary text-primary-foreground shadow-glow font-semibold gap-2"
-              >
-                <MessageCircle className="w-4 h-4" />
-                Send Campaign ({selectedCount} leads)
-              </Button>
+            <div className="sticky bottom-4 glass-strong border border-border rounded-xl px-4 py-3 shadow-xl space-y-3">
+              {/* Sandbox toggle row */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <FlaskConical className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <span className="text-xs font-semibold text-amber-400">Sandbox Mode</span>
+                <button
+                  onClick={() => setSandbox((v) => !v)}
+                  className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
+                    sandbox ? "bg-amber-500/70" : "bg-muted"
+                  }`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${
+                    sandbox ? "left-4" : "left-0.5"
+                  }`} />
+                </button>
+                {sandbox && (
+                  <>
+                    <Phone className="w-3 h-3 text-amber-400/70" />
+                    <input
+                      type="tel"
+                      value={sandboxNumber}
+                      onChange={(e) => setSandboxNumber(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-xs bg-amber-500/5 border border-amber-500/30 rounded px-2 py-1 text-amber-200 outline-none w-36"
+                      placeholder="+917838146286"
+                    />
+                    <span className="text-[10px] text-amber-400/60">All messages → this number</span>
+                  </>
+                )}
+                {!sandbox && (
+                  <span className="text-[10px] text-muted-foreground">🚀 Production — messages go to real customers</span>
+                )}
+              </div>
+
+              {/* Send / Reconfigure row */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setStep("configure")}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Reconfigure
+                </button>
+                <div className="flex-1" />
+                <Button
+                  size="lg"
+                  onClick={handleSend}
+                  disabled={selectedCount === 0}
+                  className="gradient-primary text-primary-foreground shadow-glow font-semibold gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {sandbox
+                    ? `Send ${selectedCount} → ${sandboxNumber} (sandbox)`
+                    : `Send Campaign (${selectedCount} leads)`}
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}

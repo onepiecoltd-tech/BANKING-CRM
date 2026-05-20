@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageHeader } from "./DashboardPage";
 import {
@@ -330,6 +331,55 @@ function ModelPicker({
   );
 }
 
+// ── MVP Limitation Note ────────────────────────────────────────────────────────
+
+function MvpNote() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="text-[10px] bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5 flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="text-amber-400/80">
+          <span className="font-semibold">⚠ MVP Note:</span>{" "}
+          Customer queries sample <strong>50 from 500</strong> candidates in insertion order — not necessarily the best 50.
+        </span>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="ml-auto text-amber-400 underline underline-offset-2 whitespace-nowrap hover:text-amber-300 transition-colors"
+        >
+          {open ? "Hide" : "Read more"}
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 pt-2 border-t border-amber-500/20 space-y-2 text-amber-200/70 leading-relaxed">
+              <p>
+                <span className="text-amber-400 font-semibold">What's broken now:</span>{" "}
+                <code className="bg-amber-500/10 px-1 rounded">query_customers(limit=50)</code> fetches the first 50 rows in DB insertion order — not ranked by value or relevance. The agent then scores only those 50, so high-value customers beyond row 50 are never seen.
+              </p>
+              <p>
+                <span className="text-amber-400 font-semibold">Quick fix (no infra change):</span>{" "}
+                Add <code className="bg-amber-500/10 px-1 rounded">ORDER BY credit_score DESC, annual_income DESC</code> before the LIMIT so the sample is always the financially strongest 50, not an arbitrary 50.
+              </p>
+              <p>
+                <span className="text-amber-400 font-semibold">Proper fix (scalable to 1M+ customers):</span>{" "}
+                Embed each customer profile as a vector (e.g. OpenAI <code className="bg-amber-500/10 px-1 rounded">text-embedding-3-small</code>) and store in pgvector / Pinecone. When the agent runs a query, embed the intent ("high-value personal loan conversion") and retrieve the top-K most semantically similar profiles via ANN search — bypassing the LIMIT entirely and finding the right customers regardless of portfolio size.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ── Workspace page ─────────────────────────────────────────────────────────────
 
 export function WorkspacePage() {
@@ -477,6 +527,9 @@ export function WorkspacePage() {
 
   return (
     <div className="space-y-5 h-[calc(100vh-7rem)] flex flex-col">
+      {/* MVP note */}
+      <MvpNote />
+
       <PageHeader
         title="RM AI Workspace"
         subtitle="Your AI copilot for portfolio actions. Plans, calls tools, reasons, and drafts outreach in real time."
@@ -1031,7 +1084,7 @@ function SendModal({
     { id: "mock",         label: "Mock / Log",   badge: "Dev",  color: "text-muted-foreground border-border bg-muted/20" },
   ];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -1284,14 +1337,22 @@ function SendModal({
           )}
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 // ── DraftsCard ─────────────────────────────────────────────────────────────────
 
 function DraftsCard({ drafts }: { drafts: AgentResult["drafts"] }) {
-  const [showSendModal, setShowSendModal] = useState(false);
+  // null = closed, "all" = all drafts, index = single customer
+  const [sendTarget, setSendTarget] = useState<null | "all" | number>(null);
+
+  const modalDrafts = sendTarget === "all"
+    ? drafts
+    : sendTarget !== null
+      ? [drafts[sendTarget]]
+      : [];
 
   return (
     <>
@@ -1316,6 +1377,14 @@ function DraftsCard({ drafts }: { drafts: AgentResult["drafts"] }) {
                 {d.offer_expiry && (
                   <span className="text-[9px] text-muted-foreground">⏰ {d.offer_expiry}</span>
                 )}
+                {/* Per-customer send button */}
+                <button
+                  onClick={() => setSendTarget(i)}
+                  className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 font-medium transition-colors"
+                  title={`Send to ${d.customer_name} only`}
+                >
+                  <Send className="w-2.5 h-2.5" /> Send
+                </button>
               </div>
             </div>
             {/* Personalization signals */}
@@ -1338,10 +1407,10 @@ function DraftsCard({ drafts }: { drafts: AgentResult["drafts"] }) {
         ))}
         <div className="flex gap-2">
           <button
-            onClick={() => setShowSendModal(true)}
+            onClick={() => setSendTarget("all")}
             className="text-xs px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground font-medium flex items-center gap-1.5 hover:opacity-90"
           >
-            <Send className="w-3 h-3" /> Send to customers
+            <Send className="w-3 h-3" /> Send to all customers
           </button>
           <button className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted/60">
             Schedule cadence
@@ -1350,8 +1419,8 @@ function DraftsCard({ drafts }: { drafts: AgentResult["drafts"] }) {
       </div>
 
       <AnimatePresence>
-        {showSendModal && (
-          <SendModal drafts={drafts} onClose={() => setShowSendModal(false)} />
+        {sendTarget !== null && modalDrafts.length > 0 && (
+          <SendModal drafts={modalDrafts} onClose={() => setSendTarget(null)} />
         )}
       </AnimatePresence>
     </>
