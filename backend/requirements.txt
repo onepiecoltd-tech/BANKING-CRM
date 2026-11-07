@@ -2,7 +2,7 @@ python-dotenv==1.0.0
 pydantic==2.13.4
 pydantic-settings==2.14.1
 langgraph==0.1.19
-google-generativeai==0.3.0
+google-genai>=1.0.0
 requests==2.31.0
 SQLAlchemy==2.0.23
 faker==22.0.0
@@ -18,3 +18,5 @@ twilio==9.0.0
 APScheduler==3.10.4
 python-jose==3.3.0
 passlib==1.7.4
+openpyxl>=3.1.0
+pymupdf>=1.24.0

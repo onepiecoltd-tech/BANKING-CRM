@@ -10,6 +10,7 @@ import {
   AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, YAxis,
   BarChart, Bar, PieChart, Pie, Cell, CartesianGrid,
 } from "recharts";
+import { t } from "@/lib/i18n";
 
 const COLORS = ["#5b8bff", "#34d399", "#a78bfa", "#fbbf24", "#f472b6", "#22d3ee"];
 
@@ -56,15 +57,15 @@ export function DashboardPage() {
   const pipelineStages = chartData?.pipelineStages?.length ? chartData.pipelineStages : mockPipeline;
 
   const cards = [
-    { label: "Total Customers", value: kpis.totalCustomers.toLocaleString(), delta: "+4.2%", icon: Users, accent: "primary" },
-    { label: "High-Value Customers", value: kpis.highValue.toLocaleString(), delta: "+8.1%", icon: TrendingUp, accent: "accent" },
-    { label: "Hot Leads (AI Scored)", value: kpis.hotLeads.toLocaleString(), delta: "+22 today", icon: Flame, accent: "warning" },
-    { label: "Pipeline Value", value: formatINR(kpis.pipelineValue), delta: "+12.4%", icon: Wallet, accent: "primary" },
+    { label: t("Total Customers"), value: kpis.totalCustomers.toLocaleString(), delta: "+4.2%", icon: Users, accent: "primary" },
+    { label: t("High-Value Customers"), value: kpis.highValue.toLocaleString(), delta: "+8.1%", icon: TrendingUp, accent: "accent" },
+    { label: t("Hot Leads (AI Scored)"), value: kpis.hotLeads.toLocaleString(), delta: "+22 today", icon: Flame, accent: "warning" },
+    { label: t("Pipeline Value"), value: formatINR(kpis.pipelineValue), delta: "+12.4%", icon: Wallet, accent: "primary" },
   ];
 
   const recommendations = [
     { title: `${Math.round(kpis.hotLeads * 0.4)} customers ready for personal loan upsell`, confidence: 92, type: "Cross-sell" },
-    { title: "Re-engage dormant HNI clients in Mumbai", confidence: 84, type: "Retention" },
+    { title: t("Re-engage dormant HNI clients in Mumbai"), confidence: 84, type: "Retention" },
     { title: `Pre-approved credit upgrade for salaried ${kpis.highValue > 0 ? `(${Math.round(kpis.highValue * 0.22)})` : ""}`, confidence: 78, type: "Campaign" },
   ];
 
@@ -79,8 +80,8 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
-        subtitle="Real-time view of your portfolio, AI campaigns, and conversion pipeline."
+        title={t("Dashboard")}
+        subtitle={t("Real-time view of your portfolio, AI campaigns, and conversion pipeline.")}
       />
 
       {/* KPI cards */}
@@ -116,15 +117,15 @@ export function DashboardPage() {
         <div className="glass rounded-xl p-5 shadow-card border border-warning/30">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-base">📋</span>
-            <div className="text-sm font-semibold">Morning Digest</div>
+            <div className="text-sm font-semibold">{t("Morning Digest")}</div>
             <span className="text-[10px] text-muted-foreground ml-auto">{new Date().toLocaleTimeString()}</span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Overnight Replies", value: digestData.summary.overnight_replies, color: "text-primary", emoji: "💬" },
-              { label: "Callbacks Due", value: digestData.summary.callbacks_due, color: "text-warning", emoji: "📞" },
-              { label: "Follow-ups Due", value: digestData.summary.followups_due_today, color: "text-accent", emoji: "🔁" },
-              { label: "Hot Leads", value: digestData.summary.hot_leads, color: "text-success", emoji: "🔥" },
+              { label: t("Overnight Replies"), value: digestData.summary.overnight_replies, color: "text-primary", emoji: "💬" },
+              { label: t("Callbacks Due"), value: digestData.summary.callbacks_due, color: "text-warning", emoji: "📞" },
+              { label: t("Follow-ups Due"), value: digestData.summary.followups_due_today, color: "text-accent", emoji: "🔁" },
+              { label: t("Hot Leads"), value: digestData.summary.hot_leads, color: "text-success", emoji: "🔥" },
             ].map(item => (
               <div key={item.label} className="bg-muted/30 rounded-lg p-3 text-center">
                 <div className="text-xl">{item.emoji}</div>
@@ -135,7 +136,7 @@ export function DashboardPage() {
           </div>
           {digestData.callbacks_requested?.length > 0 && (
             <div className="mt-3 space-y-1">
-              <div className="text-xs text-muted-foreground font-medium">Pending callbacks:</div>
+              <div className="text-xs text-muted-foreground font-medium">{t("Pending callbacks:")}</div>
               {digestData.callbacks_requested.slice(0, 3).map((cb: { customer_id: string; name: string; city: string; pipeline_state: string }) => (
                 <div key={cb.customer_id} className="flex items-center gap-2 text-xs py-1">
                   <span className="text-warning">📞</span>
@@ -154,13 +155,13 @@ export function DashboardPage() {
         <div className="xl:col-span-2 glass rounded-xl p-5 shadow-card">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm font-semibold">Conversion Pipeline · 12 months</div>
-              <div className="text-xs text-muted-foreground">Outreach sent vs responded vs converted</div>
+              <div className="text-sm font-semibold">{t("Conversion Pipeline · 12 months")}</div>
+              <div className="text-xs text-muted-foreground">{t("Outreach sent vs responded vs converted")}</div>
             </div>
             <div className="flex gap-3 text-xs">
-              <Legend dot="#5b8bff" label="Sent" />
-              <Legend dot="#a78bfa" label="Responded" />
-              <Legend dot="#34d399" label="Converted" />
+              <Legend dot="#5b8bff" label={t("Sent")} />
+              <Legend dot="#a78bfa" label={t("Responded")} />
+              <Legend dot="#34d399" label={t("Converted")} />
             </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
@@ -191,8 +192,8 @@ export function DashboardPage() {
         </div>
 
         <div className="glass rounded-xl p-5 shadow-card">
-          <div className="text-sm font-semibold mb-1">Customer Segments</div>
-          <div className="text-xs text-muted-foreground mb-3">Portfolio distribution</div>
+          <div className="text-sm font-semibold mb-1">{t("Customer Segments")}</div>
+          <div className="text-xs text-muted-foreground mb-3">{t("Portfolio distribution")}</div>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie data={segmentBreakdown} dataKey="value" innerRadius={50} outerRadius={80} paddingAngle={3}>
@@ -220,8 +221,8 @@ export function DashboardPage() {
         <div className="xl:col-span-2 glass rounded-xl p-5 shadow-card">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-sm font-semibold">Lifecycle Pipeline</div>
-              <div className="text-xs text-muted-foreground">Stage distribution across portfolio</div>
+              <div className="text-sm font-semibold">{t("Lifecycle Pipeline")}</div>
+              <div className="text-xs text-muted-foreground">{t("Stage distribution across portfolio")}</div>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={220}>
@@ -242,7 +243,7 @@ export function DashboardPage() {
         <div className="glass rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4 text-primary" />
-            <div className="text-sm font-semibold">AI Recommendations</div>
+            <div className="text-sm font-semibold">{t("AI Recommendations")}</div>
           </div>
           <div className="space-y-2.5">
             {recommendations.map((r) => (
@@ -272,7 +273,7 @@ export function DashboardPage() {
           <div className="glass rounded-xl p-5 shadow-card border border-destructive/20">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              <div className="text-sm font-semibold">Churn Alerts</div>
+              <div className="text-sm font-semibold">{t("Churn Alerts")}</div>
               <span className="ml-2 text-xs bg-destructive/15 text-destructive px-2 py-0.5 rounded-full">{churnAlerts.high_risk} high risk</span>
             </div>
             <div className="space-y-2">
@@ -300,7 +301,7 @@ export function DashboardPage() {
           <div className="glass rounded-xl p-5 shadow-card border border-primary/20">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-primary" />
-              <div className="text-sm font-semibold">Cross-sell Opportunities</div>
+              <div className="text-sm font-semibold">{t("Cross-sell Opportunities")}</div>
               {crossSellData.total_opportunities != null && (
                 <span className="ml-2 text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full">{crossSellData.total_opportunities} total</span>
               )}
@@ -337,7 +338,7 @@ export function DashboardPage() {
       <div className="glass rounded-xl p-5 shadow-card">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-4 h-4 text-accent" />
-          <div className="text-sm font-semibold">Live Activity</div>
+          <div className="text-sm font-semibold">{t("Live Activity")}</div>
           <span className="ml-2 text-[10px] flex items-center gap-1 text-success">
             <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" /> Real-time
           </span>
@@ -353,7 +354,7 @@ export function DashboardPage() {
                 <div className="text-[10px] text-muted-foreground">{a.time}</div>
               </div>
               <div className="hidden md:flex items-center gap-2">
-                <div className="text-[10px] text-muted-foreground">score</div>
+                <div className="text-[10px] text-muted-foreground">{t("score")}</div>
                 <span className={`text-xs font-semibold ${a.score > 75 ? "text-success" : a.score > 50 ? "text-warning" : "text-muted-foreground"}`}>{Math.round(a.score)}</span>
               </div>
               <Send className="w-4 h-4 text-muted-foreground" />

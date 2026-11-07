@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PageHeader } from "./DashboardPage";
 import { Sparkles, Database, Send, Shield, FileText, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export function SettingsPage() {
   const [llm, setLlm] = useState("gemini");
@@ -9,30 +10,30 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Admin & Settings" subtitle="Pluggable architecture — swap providers without code changes." />
+      <PageHeader title="Admin & Settings" subtitle={t("Pluggable architecture — swap providers without code changes.")} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <ProviderCard
-          icon={Sparkles} title="LLM Provider"
+          icon={Sparkles} title={t("LLM Provider")}
           options={[
-            { id: "gemini", name: "Gemini 2.0 Flash", desc: "Google · default · multimodal" },
-            { id: "ollama", name: "Ollama qwen2.5:7b", desc: "Local · private · offline" },
+            { id: "gemini", name: "Gemini 2.0 Flash", desc: t("Google · default · multimodal") },
+            { id: "ollama", name: "Ollama qwen2.5:7b", desc: t("Local · private · offline") },
           ]}
           value={llm} onChange={setLlm}
         />
         <ProviderCard
-          icon={Database} title="CRM Backend"
+          icon={Database} title={t("CRM Backend")}
           options={[
-            { id: "sqlite", name: "SQLite", desc: "Built-in · zero setup" },
-            { id: "hubspot", name: "HubSpot", desc: "Adapter · live sync" },
+            { id: "sqlite", name: "SQLite", desc: t("Built-in · zero setup") },
+            { id: "hubspot", name: "HubSpot", desc: t("Adapter · live sync") },
           ]}
           value={crm} onChange={setCrm}
         />
         <ProviderCard
-          icon={Send} title="Outreach Sender"
+          icon={Send} title={t("Outreach Sender")}
           options={[
-            { id: "mock", name: "Mock Sender", desc: "Demo · dry-run only" },
-            { id: "twilio", name: "Twilio WhatsApp", desc: "Production · live sends" },
+            { id: "mock", name: "Mock Sender", desc: t("Demo · dry-run only") },
+            { id: "twilio", name: "Twilio WhatsApp", desc: t("Production · live sends") },
           ]}
           value={sender} onChange={setSender}
         />
@@ -62,7 +63,7 @@ export function SettingsPage() {
 
         <div className="glass rounded-xl p-5 shadow-card">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-accent" /><div className="text-sm font-semibold">Audit Log</div>
+            <FileText className="w-4 h-4 text-accent" /><div className="text-sm font-semibold">{t("Audit Log")}</div>
           </div>
           <div className="space-y-1.5 text-[11px] font-mono max-h-72 overflow-y-auto pr-1">
             {[

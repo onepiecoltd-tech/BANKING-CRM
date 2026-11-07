@@ -12,6 +12,7 @@ import {
   ResponsiveContainer, BarChart, Bar, Cell, XAxis, Tooltip, RadialBarChart, RadialBar,
 } from "recharts";
 import { tooltipStyle } from "./DashboardPage";
+import { t } from "@/lib/i18n";
 
 const SEGMENT_FILTERS = ["All", "premium", "affluent", "mass"];
 const SEGMENT_LABELS: Record<string, string> = { All: "All", premium: "Premium", affluent: "Affluent", mass: "Mass" };
@@ -46,7 +47,7 @@ export function CustomersPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Customer Intelligence"
+        title={t("Customer Intelligence")}
         subtitle={`${total.toLocaleString()} customers · AI-scored for value and conversion.`}
         actions={
           <button className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted/60 flex items-center gap-1.5">
@@ -61,7 +62,7 @@ export function CustomersPage() {
           <input
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            placeholder="Search by name, city, or occupation…"
+            placeholder={t("Search by name, city, or occupation…")}
             className="w-full bg-input/60 border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
           />
         </div>
@@ -86,14 +87,14 @@ export function CustomersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border bg-card/40">
-                <th className="px-4 py-2.5 font-medium">Customer</th>
-                <th className="px-4 py-2.5 font-medium">Segment</th>
-                <th className="px-4 py-2.5 font-medium">City</th>
-                <th className="px-4 py-2.5 font-medium text-right">Annual Income</th>
-                <th className="px-4 py-2.5 font-medium text-right">Balance</th>
-                <th className="px-4 py-2.5 font-medium text-center">CLV Score</th>
-                <th className="px-4 py-2.5 font-medium text-center">Credit</th>
-                <th className="px-4 py-2.5 font-medium">Products</th>
+                <th className="px-4 py-2.5 font-medium">{t("Customer")}</th>
+                <th className="px-4 py-2.5 font-medium">{t("Segment")}</th>
+                <th className="px-4 py-2.5 font-medium">{t("City")}</th>
+                <th className="px-4 py-2.5 font-medium text-right">{t("Annual Income")}</th>
+                <th className="px-4 py-2.5 font-medium text-right">{t("Balance")}</th>
+                <th className="px-4 py-2.5 font-medium text-center">{t("CLV Score")}</th>
+                <th className="px-4 py-2.5 font-medium text-center">{t("Credit")}</th>
+                <th className="px-4 py-2.5 font-medium">{t("Products")}</th>
               </tr>
             </thead>
             <tbody>
@@ -128,10 +129,10 @@ export function CustomersPage() {
                   <td className="px-4 py-2.5 text-center text-xs font-mono">{c.credit_score ?? "—"}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex flex-wrap gap-1">
-                      {c.has_credit_card && <Pill>CC</Pill>}
-                      {c.has_personal_loan && <Pill>PL</Pill>}
-                      {c.has_home_loan && <Pill accent="accent">HL</Pill>}
-                      {c.has_fd && <Pill accent="warning">FD</Pill>}
+                      {c.has_credit_card && <Pill>{t("CC")}</Pill>}
+                      {c.has_personal_loan && <Pill>{t("PL")}</Pill>}
+                      {c.has_home_loan && <Pill accent="accent">{t("HL")}</Pill>}
+                      {c.has_fd && <Pill accent="warning">{t("FD")}</Pill>}
                     </div>
                   </td>
                 </tr>
@@ -210,16 +211,16 @@ function CustomerDrawer({ customer, onClose }: { customer: ApiCustomer; onClose:
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs">
-            <Info icon={MapPin} label="City" value={customer.city ?? "—"} />
-            <Info icon={Briefcase} label="Occupation" value={customer.occupation ?? "—"} />
-            <InfoText label="Annual Income" value={formatINR(customer.annual_income)} />
-            <InfoText label="Avg Balance" value={formatINR(customer.monthly_avg_balance)} />
+            <Info icon={MapPin} label={t("City")} value={customer.city ?? "—"} />
+            <Info icon={Briefcase} label={t("Occupation")} value={customer.occupation ?? "—"} />
+            <InfoText label={t("Annual Income")} value={formatINR(customer.annual_income)} />
+            <InfoText label={t("Avg Balance")} value={formatINR(customer.monthly_avg_balance)} />
           </div>
 
           <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-accent/5 p-4">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              <div className="text-xs font-semibold">AI Summary</div>
+              <div className="text-xs font-semibold">{t("AI Summary")}</div>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {customer.name} is a <span className="text-foreground font-medium">{customer.segment}</span> customer
@@ -233,9 +234,9 @@ function CustomerDrawer({ customer, onClose }: { customer: ApiCustomer; onClose:
 
           {scoreData && (
             <div className="grid grid-cols-3 gap-3">
-              <ScoreCard label="CLV Score" value={Math.round(scoreData.score)} color="#5b8bff" />
-              <ScoreCard label="Income" value={Math.round(scoreData.factors.income_norm as number * 100)} color="#34d399" />
-              <ScoreCard label="Credit" value={Math.round(scoreData.factors.credit_score_norm as number * 100)} color="#a78bfa" />
+              <ScoreCard label={t("CLV Score")} value={Math.round(scoreData.score)} color="#5b8bff" />
+              <ScoreCard label={t("Income")} value={Math.round(scoreData.factors.income_norm as number * 100)} color="#34d399" />
+              <ScoreCard label={t("Credit")} value={Math.round(scoreData.factors.credit_score_norm as number * 100)} color="#a78bfa" />
             </div>
           )}
 
@@ -259,19 +260,19 @@ function CustomerDrawer({ customer, onClose }: { customer: ApiCustomer; onClose:
           )}
 
           <div>
-            <div className="text-xs font-semibold mb-2">Products held</div>
+            <div className="text-xs font-semibold mb-2">{t("Products held")}</div>
             <div className="flex flex-wrap gap-1.5">
-              {customer.has_credit_card && <Pill>Credit Card</Pill>}
-              {customer.has_personal_loan && <Pill>Personal Loan</Pill>}
-              {customer.has_home_loan && <Pill accent="accent">Home Loan</Pill>}
-              {customer.has_fd && <Pill accent="warning">Fixed Deposit</Pill>}
+              {customer.has_credit_card && <Pill>{t("Credit Card")}</Pill>}
+              {customer.has_personal_loan && <Pill>{t("Personal Loan")}</Pill>}
+              {customer.has_home_loan && <Pill accent="accent">{t("Home Loan")}</Pill>}
+              {customer.has_fd && <Pill accent="warning">{t("Fixed Deposit")}</Pill>}
               {!customer.has_credit_card && !customer.has_personal_loan && !customer.has_home_loan && !customer.has_fd && (
-                <span className="text-xs text-muted-foreground">No products held</span>
+                <span className="text-xs text-muted-foreground">{t("No products held")}</span>
               )}
             </div>
             {recsData?.recommendations?.[0] && (
               <div className="mt-3 p-3 rounded-lg border border-accent/30 bg-accent/5">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI-recommended next product</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("AI-recommended next product")}</div>
                 <div className="text-sm font-medium mt-0.5">{recsData.recommendations[0].product_name}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">{recsData.recommendations[0].reasons[0]}</div>
               </div>
@@ -280,7 +281,7 @@ function CustomerDrawer({ customer, onClose }: { customer: ApiCustomer; onClose:
 
           {txns && txns.length > 0 && (
             <div>
-              <div className="text-xs font-semibold mb-2">Recent transactions</div>
+              <div className="text-xs font-semibold mb-2">{t("Recent transactions")}</div>
               <div className="rounded-xl border border-border overflow-hidden">
                 {txns.slice(0, 8).map((t) => (
                   <div key={t.txn_id} className="flex items-center justify-between px-3 py-2 text-xs border-b border-border last:border-0 bg-card/40">
@@ -297,10 +298,10 @@ function CustomerDrawer({ customer, onClose }: { customer: ApiCustomer; onClose:
 
           <div className="flex gap-2 pt-2">
             <button className="flex-1 py-2 rounded-lg gradient-primary text-primary-foreground text-sm font-medium">
-              Generate Outreach
+              {t("Generate Outreach")}
             </button>
             <button className="flex-1 py-2 rounded-lg border border-border bg-muted/40 text-sm font-medium hover:bg-muted/60">
-              Schedule Call
+              {t("Schedule Call")}
             </button>
           </div>
         </div>

@@ -23,6 +23,7 @@ import {
   Phone,
   FlaskConical,
 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,19 +56,19 @@ interface CampaignPreviewResponse {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PRODUCTS = [
-  { id: "PL001", label: "Personal Loan" },
-  { id: "CC001", label: "Credit Card" },
-  { id: "HL001", label: "Home Loan" },
-  { id: "FD001", label: "Fixed Deposit" },
+  { id: "PL001", label: t("Personal Loan") },
+  { id: "CC001", label: t("Credit Card") },
+  { id: "HL001", label: t("Home Loan") },
+  { id: "FD001", label: t("Fixed Deposit") },
 ] as const;
 
 const SEGMENTS = ["All", "Mass", "Affluent", "Premium"] as const;
 type Segment = (typeof SEGMENTS)[number];
 
 const TONES = [
-  { id: "warm", label: "Warm 😊" },
-  { id: "professional", label: "Professional 💼" },
-  { id: "urgent", label: "Urgent ⚡" },
+  { id: "warm", label: t("Warm 😊") },
+  { id: "professional", label: t("Professional 💼") },
+  { id: "urgent", label: t("Urgent ⚡") },
 ] as const;
 type Tone = (typeof TONES)[number]["id"];
 
@@ -258,13 +259,13 @@ function LeadCard({
             {/* Composer header */}
             <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/30 border-b border-border/40">
               <MessageCircle className="w-3 h-3 text-primary/70" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex-1">WhatsApp Message</span>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex-1">{t("WhatsApp Message")}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); setEditOpen((v) => !v); }}
                 className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Pencil className="w-2.5 h-2.5" />
-                {editOpen ? "Close" : "Edit"}
+                {editOpen ? t("Close") : t("Edit")}
               </button>
               <button
                 onClick={handleRegenerate}
@@ -276,7 +277,7 @@ function LeadCard({
                 ) : (
                   <Sparkles className="w-2.5 h-2.5" />
                 )}
-                {regenerating ? "Writing…" : "✨ Regenerate"}
+                {regenerating ? t("Writing…") : t("✨ Regenerate")}
               </button>
             </div>
 
@@ -288,7 +289,7 @@ function LeadCard({
                 onClick={(e) => e.stopPropagation()}
                 rows={6}
                 className="w-full bg-transparent px-3 py-2 text-[11px] leading-relaxed font-mono text-foreground/90 outline-none resize-none"
-                placeholder="Enter WhatsApp message…"
+                placeholder={t("Enter WhatsApp message…")}
               />
             ) : (
               <p className="px-3 py-2 text-[11px] text-muted-foreground leading-relaxed italic break-words line-clamp-3">
@@ -428,8 +429,8 @@ export function CampaignPage() {
           <Rocket className="w-5 h-5 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-display font-bold">Campaign Builder</h1>
-          <p className="text-sm text-muted-foreground">Find and reach the right customers in under 45 seconds</p>
+          <h1 className="text-2xl font-display font-bold">{t("Campaign Builder")}</h1>
+          <p className="text-sm text-muted-foreground">{t("Find and reach the right customers in under 45 seconds")}</p>
         </div>
       </div>
 
@@ -453,7 +454,7 @@ export function CampaignPage() {
                 {i + 1}
               </div>
               <span className={`text-xs ${isCurrent ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                {s === "configure" ? "Configure" : s === "review" ? "Review Leads" : "Done"}
+                {s === "configure" ? "Configure" : s === "review" ? t("Review Leads") : t("Done")}
               </span>
               {i < 2 && <div className={`w-8 h-px ${isActive && !isCurrent ? "bg-primary/40" : "bg-border"}`} />}
             </div>
@@ -468,13 +469,13 @@ export function CampaignPage() {
             <Card className="p-6 lg:p-8 border-border/60">
               <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
                 <Target className="w-4 h-4 text-primary" />
-                Configure Campaign
+                {t("Configure Campaign")}
               </h2>
 
               <div className="space-y-7">
                 {/* Product selector */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-foreground">Product</label>
+                  <label className="text-sm font-medium mb-2 block text-foreground">{t("Product")}</label>
                   <select
                     value={productId}
                     onChange={(e) => setProductId(e.target.value)}
@@ -490,7 +491,7 @@ export function CampaignPage() {
 
                 {/* Customer segment */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-foreground">Customer Segment</label>
+                  <label className="text-sm font-medium mb-2 block text-foreground">{t("Customer Segment")}</label>
                   <PillToggle<Segment>
                     options={SEGMENTS}
                     value={segment}
@@ -505,7 +506,7 @@ export function CampaignPage() {
                     <span className="text-muted-foreground font-normal">(optional)</span>
                   </label>
                   <Input
-                    placeholder="Any city"
+                    placeholder={t("Any city")}
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     className="max-w-xs"
@@ -515,7 +516,7 @@ export function CampaignPage() {
                 {/* Min conversion probability */}
                 <div>
                   <label className="text-sm font-medium mb-1 block text-foreground">
-                    Minimum Conversion Probability
+                    {t("Minimum Conversion Probability")}
                   </label>
                   <p className="text-xs text-muted-foreground mb-4">
                     Only show leads with{" "}
@@ -537,7 +538,7 @@ export function CampaignPage() {
 
                 {/* Message tone */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-foreground">Message Tone</label>
+                  <label className="text-sm font-medium mb-2 block text-foreground">{t("Message Tone")}</label>
                   <PillToggle<Tone>
                     options={TONES}
                     value={tone}
@@ -547,7 +548,7 @@ export function CampaignPage() {
 
                 {/* Max leads */}
                 <div>
-                  <label className="text-sm font-medium mb-2 block text-foreground">Max Leads</label>
+                  <label className="text-sm font-medium mb-2 block text-foreground">{t("Max Leads")}</label>
                   <div className="flex items-center gap-3 max-w-xs">
                     <Input
                       type="number"
@@ -557,7 +558,7 @@ export function CampaignPage() {
                       onChange={(e) => setMaxLeads(Math.min(50, Math.max(1, Number(e.target.value))))}
                       className="w-24 text-center"
                     />
-                    <span className="text-xs text-muted-foreground">leads (max 50)</span>
+                    <span className="text-xs text-muted-foreground">{t("leads (max 50)")}</span>
                   </div>
                 </div>
 
@@ -579,12 +580,12 @@ export function CampaignPage() {
                     {step === "loading" ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Finding best leads…
+                        {t("Finding best leads…")}
                       </>
                     ) : (
                       <>
                         <Zap className="w-4 h-4" />
-                        Find Best Leads →
+                        {t("Find Best Leads →")}
                       </>
                     )}
                   </Button>
@@ -629,14 +630,14 @@ export function CampaignPage() {
                 onClick={selectAll}
                 className="text-xs text-primary hover:underline font-medium"
               >
-                Select All
+                {t("Select All")}
               </button>
               <span className="text-muted-foreground">·</span>
               <button
                 onClick={deselectAll}
                 className="text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
-                Deselect All
+                {t("Deselect All")}
               </button>
             </div>
 
@@ -662,7 +663,7 @@ export function CampaignPage() {
               {/* Sandbox toggle row */}
               <div className="flex items-center gap-3 flex-wrap">
                 <FlaskConical className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-amber-400">Sandbox Mode</span>
+                <span className="text-xs font-semibold text-amber-400">{t("Sandbox Mode")}</span>
                 <button
                   onClick={() => setSandbox((v) => !v)}
                   className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 ${
@@ -684,11 +685,11 @@ export function CampaignPage() {
                       className="font-mono text-xs bg-amber-500/5 border border-amber-500/30 rounded px-2 py-1 text-amber-200 outline-none w-36"
                       placeholder="+917838146286"
                     />
-                    <span className="text-[10px] text-amber-400/60">All messages → this number</span>
+                    <span className="text-[10px] text-amber-400/60">{t("All messages → this number")}</span>
                   </>
                 )}
                 {!sandbox && (
-                  <span className="text-[10px] text-muted-foreground">🚀 Production — messages go to real customers</span>
+                  <span className="text-[10px] text-muted-foreground">{t("🚀 Production — messages go to real customers")}</span>
                 )}
               </div>
 
@@ -699,7 +700,7 @@ export function CampaignPage() {
                   className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition"
                 >
                   <ChevronLeft className="w-4 h-4" />
-                  Reconfigure
+                  {t("Reconfigure")}
                 </button>
                 <div className="flex-1" />
                 <Button
@@ -726,7 +727,7 @@ export function CampaignPage() {
                 <Loader2 className="w-8 h-8 text-primary-foreground animate-spin" />
               </div>
               <div className="text-center">
-                <h2 className="text-xl font-semibold mb-2">Sending Campaign…</h2>
+                <h2 className="text-xl font-semibold mb-2">{t("Sending Campaign…")}</h2>
                 <p className="text-muted-foreground text-sm">
                   Sending to {selectedCount} leads via WhatsApp
                 </p>
@@ -751,7 +752,7 @@ export function CampaignPage() {
                 <CheckCircle2 className="w-8 h-8 text-emerald-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-display font-bold mb-2">Campaign Sent!</h2>
+                <h2 className="text-2xl font-display font-bold mb-2">{t("Campaign Sent!")}</h2>
                 <p className="text-muted-foreground">
                   {selectedCount} messages delivered via WhatsApp
                 </p>
@@ -764,12 +765,12 @@ export function CampaignPage() {
                 <Link to="/conversations">
                   <Button size="lg" className="gradient-primary text-primary-foreground shadow-glow font-semibold gap-2">
                     <MessageCircle className="w-4 h-4" />
-                    View Conversations →
+                    {t("View Conversations →")}
                   </Button>
                 </Link>
                 <Button size="lg" variant="outline" onClick={handleReset} className="gap-2">
                   <RefreshCw className="w-4 h-4" />
-                  New Campaign
+                  {t("New Campaign")}
                 </Button>
               </div>
             </Card>

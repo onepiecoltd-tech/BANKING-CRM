@@ -7,6 +7,7 @@ import {
   TrendingUp, Users, Target, ArrowRight, Phone,
   Clock, Inbox, AlertTriangle, ChevronRight, X, Keyboard,
 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 // ── Intent badge colours ──────────────────────────────────────────────────────
 
@@ -50,12 +51,12 @@ function intentLabel(state: string) {
 type FilterType = "ALL" | "HOT" | "ENGAGED" | "OBJECTION" | "NO_REPLY" | "CONVERTED";
 
 const FILTER_PILLS: { id: FilterType; label: string }[] = [
-  { id: "ALL",       label: "All" },
-  { id: "HOT",       label: "🔥 Hot" },
-  { id: "ENGAGED",   label: "💬 Engaged" },
-  { id: "OBJECTION", label: "❌ Objection" },
-  { id: "NO_REPLY",  label: "🔕 No Reply" },
-  { id: "CONVERTED", label: "✅ Converted" },
+  { id: "ALL",       label: t("All") },
+  { id: "HOT",       label: t("🔥 Hot") },
+  { id: "ENGAGED",   label: t("💬 Engaged") },
+  { id: "OBJECTION", label: t("❌ Objection") },
+  { id: "NO_REPLY",  label: t("🔕 No Reply") },
+  { id: "CONVERTED", label: t("✅ Converted") },
 ];
 
 function filterReplies(replies: PipelineReply[], filter: FilterType): PipelineReply[] {
@@ -249,7 +250,7 @@ function StageTracker({ stage }: { stage: string }) {
                   initial={{ width: 0, opacity: 0 }} animate={{ width: "auto", opacity: 1 }}
                   className="ml-auto text-[10px] text-muted-foreground"
                 >
-                  active
+                  {t("active")}
                 </motion.span>
               </AnimatePresence>
             )}
@@ -263,10 +264,10 @@ function StageTracker({ stage }: { stage: string }) {
 // ── Follow-up Cadence ─────────────────────────────────────────────────────────
 
 const CADENCE_STEPS = [
-  { day: 0,  label: "Initial outreach sent" },
-  { day: 3,  label: "Value-add follow-up" },
-  { day: 7,  label: "Social proof" },
-  { day: 14, label: "Last attempt" },
+  { day: 0,  label: t("Initial outreach sent") },
+  { day: 3,  label: t("Value-add follow-up") },
+  { day: 7,  label: t("Social proof") },
+  { day: 14, label: t("Last attempt") },
 ];
 
 function FollowUpCadence({ interactionDate }: { interactionDate: string }) {
@@ -278,7 +279,7 @@ function FollowUpCadence({ interactionDate }: { interactionDate: string }) {
     <div className="glass rounded-xl p-4 shadow-card">
       <div className="text-xs font-semibold mb-3 flex items-center gap-2">
         <span>📅</span>
-        Follow-up Schedule
+        {t("Follow-up Schedule")}
       </div>
       <div className="space-y-2">
         {CADENCE_STEPS.map((step, i) => {
@@ -342,7 +343,7 @@ function KeyboardHelp({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Keyboard className="w-4 h-4 text-primary" />
-            Keyboard Shortcuts
+            {t("Keyboard Shortcuts")}
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition">
             <X className="w-4 h-4" />
@@ -350,10 +351,10 @@ function KeyboardHelp({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-2.5">
           {[
-            { key: "J", desc: "Next conversation" },
-            { key: "K", desc: "Previous conversation" },
-            { key: "R", desc: "Mark as resolved" },
-            { key: "?", desc: "Toggle this help" },
+            { key: "J", desc: t("Next conversation") },
+            { key: "K", desc: t("Previous conversation") },
+            { key: "R", desc: t("Mark as resolved") },
+            { key: "?", desc: t("Toggle this help") },
           ].map(({ key, desc }) => (
             <div key={key} className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{desc}</span>
@@ -395,12 +396,12 @@ function MorningDigestBanner({
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button className="px-2.5 py-1 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-300 transition text-[11px] font-medium">
-          View all
+          {t("View all")}
         </button>
         <button
           onClick={onDismiss}
           className="p-1 rounded-lg hover:bg-blue-500/20 text-blue-400 hover:text-blue-200 transition"
-          aria-label="Dismiss banner"
+          aria-label={t("Dismiss banner")}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -527,11 +528,11 @@ export function ConversationsPage() {
 
   // ── KPI tiles ──────────────────────────────────────────────────────────────
   const kpis = [
-    { label: "Contacted",  val: data?.total_contacted ?? 0, icon: <Users className="w-4 h-4" />,    color: "text-blue-400" },
-    { label: "Replied",    val: data?.total_replied   ?? 0, icon: <MessageSquare className="w-4 h-4" />, color: "text-primary" },
-    { label: "Converted",  val: data?.total_converted ?? 0, icon: <Target className="w-4 h-4" />,   color: "text-emerald-400" },
+    { label: t("Contacted"),  val: data?.total_contacted ?? 0, icon: <Users className="w-4 h-4" />,    color: "text-blue-400" },
+    { label: t("Replied"),    val: data?.total_replied   ?? 0, icon: <MessageSquare className="w-4 h-4" />, color: "text-primary" },
+    { label: t("Converted"),  val: data?.total_converted ?? 0, icon: <Target className="w-4 h-4" />,   color: "text-emerald-400" },
     {
-      label: "Conv Rate",
+      label: t("Conv Rate"),
       val: data && data.total_replied > 0
         ? `${Math.round((data.total_converted / data.total_replied) * 100)}%`
         : "—",
@@ -554,7 +555,7 @@ export function ConversationsPage() {
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <RefreshCw className="w-4 h-4 animate-spin" />
-          Loading pipeline data…
+          {t("Loading pipeline data…")}
         </div>
       </div>
     );
@@ -583,7 +584,7 @@ export function ConversationsPage() {
 
         <PageHeader
           title="WhatsApp Inbox & Pipeline"
-          subtitle="Live AI sales conversations — replies tracked, intents classified, funnel updated automatically."
+          subtitle={t("Live AI sales conversations — replies tracked, intents classified, funnel updated automatically.")}
           actions={
             <button
               onClick={load}
@@ -642,7 +643,7 @@ export function ConversationsPage() {
               {filteredReplies.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground text-xs">
                   <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  No conversations in this category.
+                  {t("No conversations in this category.")}
                 </div>
               ) : (
                 filteredReplies.map((r, i) => (
@@ -662,11 +663,11 @@ export function ConversationsPage() {
 
             {/* Keyboard hint */}
             <div className="px-3 py-2 border-t border-border text-[10px] text-muted-foreground flex items-center justify-between">
-              <span>J/K navigate · R resolve · ? help</span>
+              <span>{t("J/K navigate · R resolve · ? help")}</span>
               <button
                 onClick={() => setShowKeyboardHelp(true)}
                 className="hover:text-foreground transition"
-                aria-label="Show keyboard shortcuts"
+                aria-label={t("Show keyboard shortcuts")}
               >
                 <Keyboard className="w-3 h-3" />
               </button>
@@ -737,7 +738,7 @@ export function ConversationsPage() {
                       ) : (
                         <div className="flex justify-center mb-2">
                           <span className="text-[10px] text-muted-foreground bg-muted/40 border border-border px-3 py-1 rounded-full">
-                            Campaign outreach sent · AI agent active
+                            {t("Campaign outreach sent · AI agent active")}
                           </span>
                         </div>
                       )}
@@ -772,7 +773,7 @@ export function ConversationsPage() {
                 {/* Composer — read only, shows dynamic RM persona name */}
                 <div className="border-t border-border p-3 flex items-center gap-2 bg-card/40 flex-shrink-0">
                   <div className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-muted-foreground italic">
-                    AI Sales Agent handles replies automatically · {selected.pipeline_state === "CALLBACK_REQUESTED" ? "📞 Callback scheduled" : "Monitoring for response…"}
+                    AI Sales Agent handles replies automatically · {selected.pipeline_state === "CALLBACK_REQUESTED" ? t("📞 Callback scheduled") : t("Monitoring for response…")}
                   </div>
                   <div className="w-9 h-9 grid place-items-center rounded-lg gradient-primary">
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
@@ -782,7 +783,7 @@ export function ConversationsPage() {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-3">
                 <MessageSquare className="w-12 h-12 opacity-20" />
-                <div className="text-sm">Select a conversation to view</div>
+                <div className="text-sm">{t("Select a conversation to view")}</div>
               </div>
             )}
           </div>
@@ -793,12 +794,12 @@ export function ConversationsPage() {
             <div className="glass rounded-xl p-4 shadow-card">
               <div className="text-xs font-semibold mb-3 flex items-center gap-2">
                 <ArrowRight className="w-3.5 h-3.5 text-primary" />
-                Pipeline Stage
+                {t("Pipeline Stage")}
               </div>
               {selected ? (
                 <StageTracker stage={selected.pipeline_state} />
               ) : (
-                <div className="text-xs text-muted-foreground">Select a conversation</div>
+                <div className="text-xs text-muted-foreground">{t("Select a conversation")}</div>
               )}
             </div>
 
@@ -812,7 +813,7 @@ export function ConversationsPage() {
               <div className="glass rounded-xl p-4 shadow-card">
                 <div className="text-xs font-semibold mb-3 flex items-center gap-2">
                   <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                  Full Funnel
+                  {t("Full Funnel")}
                 </div>
                 <FunnelBar funnel={data.funnel} />
               </div>
@@ -821,7 +822,7 @@ export function ConversationsPage() {
             {/* Quick actions for selected conv */}
             {selected && (
               <div className="glass rounded-xl p-4 shadow-card space-y-2">
-                <div className="text-xs font-semibold">Quick Actions</div>
+                <div className="text-xs font-semibold">{t("Quick Actions")}</div>
                 {selected.pipeline_state === "INTERESTED" || selected.pipeline_state === "CALLBACK_REQUESTED" ? (
                   <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2">
                     🔥 Hot lead — schedule callback!
@@ -857,7 +858,7 @@ export function ConversationsPage() {
                       : "border-border bg-muted/40 hover:bg-muted/60"
                   }`}
                 >
-                  {resolvedIds.has(replyId(selected)) ? "✅ Resolved · Undo" : "Mark as Resolved"}
+                  {resolvedIds.has(replyId(selected)) ? t("✅ Resolved · Undo") : t("Mark as Resolved")}
                 </button>
               </div>
             )}

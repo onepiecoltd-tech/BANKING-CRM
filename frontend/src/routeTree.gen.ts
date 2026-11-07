@@ -18,6 +18,18 @@ import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as CampaignRouteImport } from './routes/campaign'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CorpIndexRouteImport } from './routes/corp.index'
+import { Route as CorpSettingsRouteImport } from './routes/corp.settings'
+import { Route as CorpReasoningRouteImport } from './routes/corp.reasoning'
+import { Route as CorpPipelineRouteImport } from './routes/corp.pipeline'
+import { Route as CorpOutreachRouteImport } from './routes/corp.outreach'
+import { Route as CorpImportRouteImport } from './routes/corp.import'
+import { Route as CorpCustomersRouteImport } from './routes/corp.customers'
+import { Route as CorpConversationsRouteImport } from './routes/corp.conversations'
+import { Route as CorpCampaignsRouteImport } from './routes/corp.campaigns'
+import { Route as CorpAnalyticsRouteImport } from './routes/corp.analytics'
+import { Route as CorpAgentRouteImport } from './routes/corp.agent'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 
 const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/workspace',
@@ -64,6 +76,66 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CorpIndexRoute = CorpIndexRouteImport.update({
+  id: '/corp/',
+  path: '/corp/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpSettingsRoute = CorpSettingsRouteImport.update({
+  id: '/corp/settings',
+  path: '/corp/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpReasoningRoute = CorpReasoningRouteImport.update({
+  id: '/corp/reasoning',
+  path: '/corp/reasoning',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpPipelineRoute = CorpPipelineRouteImport.update({
+  id: '/corp/pipeline',
+  path: '/corp/pipeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpOutreachRoute = CorpOutreachRouteImport.update({
+  id: '/corp/outreach',
+  path: '/corp/outreach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpImportRoute = CorpImportRouteImport.update({
+  id: '/corp/import',
+  path: '/corp/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpCustomersRoute = CorpCustomersRouteImport.update({
+  id: '/corp/customers',
+  path: '/corp/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpConversationsRoute = CorpConversationsRouteImport.update({
+  id: '/corp/conversations',
+  path: '/corp/conversations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpCampaignsRoute = CorpCampaignsRouteImport.update({
+  id: '/corp/campaigns',
+  path: '/corp/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpAnalyticsRoute = CorpAnalyticsRouteImport.update({
+  id: '/corp/analytics',
+  path: '/corp/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorpAgentRoute = CorpAgentRouteImport.update({
+  id: '/corp/agent',
+  path: '/corp/agent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +147,18 @@ export interface FileRoutesByFullPath {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/corp/agent': typeof CorpAgentRoute
+  '/corp/analytics': typeof CorpAnalyticsRoute
+  '/corp/campaigns': typeof CorpCampaignsRoute
+  '/corp/conversations': typeof CorpConversationsRoute
+  '/corp/customers': typeof CorpCustomersRoute
+  '/corp/import': typeof CorpImportRoute
+  '/corp/outreach': typeof CorpOutreachRoute
+  '/corp/pipeline': typeof CorpPipelineRoute
+  '/corp/reasoning': typeof CorpReasoningRoute
+  '/corp/settings': typeof CorpSettingsRoute
+  '/corp/': typeof CorpIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +170,18 @@ export interface FileRoutesByTo {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/corp/agent': typeof CorpAgentRoute
+  '/corp/analytics': typeof CorpAnalyticsRoute
+  '/corp/campaigns': typeof CorpCampaignsRoute
+  '/corp/conversations': typeof CorpConversationsRoute
+  '/corp/customers': typeof CorpCustomersRoute
+  '/corp/import': typeof CorpImportRoute
+  '/corp/outreach': typeof CorpOutreachRoute
+  '/corp/pipeline': typeof CorpPipelineRoute
+  '/corp/reasoning': typeof CorpReasoningRoute
+  '/corp/settings': typeof CorpSettingsRoute
+  '/corp': typeof CorpIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +194,18 @@ export interface FileRoutesById {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/corp/agent': typeof CorpAgentRoute
+  '/corp/analytics': typeof CorpAnalyticsRoute
+  '/corp/campaigns': typeof CorpCampaignsRoute
+  '/corp/conversations': typeof CorpConversationsRoute
+  '/corp/customers': typeof CorpCustomersRoute
+  '/corp/import': typeof CorpImportRoute
+  '/corp/outreach': typeof CorpOutreachRoute
+  '/corp/pipeline': typeof CorpPipelineRoute
+  '/corp/reasoning': typeof CorpReasoningRoute
+  '/corp/settings': typeof CorpSettingsRoute
+  '/corp/': typeof CorpIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +219,18 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/users'
+    | '/corp/agent'
+    | '/corp/analytics'
+    | '/corp/campaigns'
+    | '/corp/conversations'
+    | '/corp/customers'
+    | '/corp/import'
+    | '/corp/outreach'
+    | '/corp/pipeline'
+    | '/corp/reasoning'
+    | '/corp/settings'
+    | '/corp/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +242,18 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/users'
+    | '/corp/agent'
+    | '/corp/analytics'
+    | '/corp/campaigns'
+    | '/corp/conversations'
+    | '/corp/customers'
+    | '/corp/import'
+    | '/corp/outreach'
+    | '/corp/pipeline'
+    | '/corp/reasoning'
+    | '/corp/settings'
+    | '/corp'
   id:
     | '__root__'
     | '/'
@@ -133,6 +265,18 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/users'
+    | '/corp/agent'
+    | '/corp/analytics'
+    | '/corp/campaigns'
+    | '/corp/conversations'
+    | '/corp/customers'
+    | '/corp/import'
+    | '/corp/outreach'
+    | '/corp/pipeline'
+    | '/corp/reasoning'
+    | '/corp/settings'
+    | '/corp/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +289,18 @@ export interface RootRouteChildren {
   ReasoningRoute: typeof ReasoningRoute
   SettingsRoute: typeof SettingsRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  CorpAgentRoute: typeof CorpAgentRoute
+  CorpAnalyticsRoute: typeof CorpAnalyticsRoute
+  CorpCampaignsRoute: typeof CorpCampaignsRoute
+  CorpConversationsRoute: typeof CorpConversationsRoute
+  CorpCustomersRoute: typeof CorpCustomersRoute
+  CorpImportRoute: typeof CorpImportRoute
+  CorpOutreachRoute: typeof CorpOutreachRoute
+  CorpPipelineRoute: typeof CorpPipelineRoute
+  CorpReasoningRoute: typeof CorpReasoningRoute
+  CorpSettingsRoute: typeof CorpSettingsRoute
+  CorpIndexRoute: typeof CorpIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +368,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/corp/': {
+      id: '/corp/'
+      path: '/corp'
+      fullPath: '/corp/'
+      preLoaderRoute: typeof CorpIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/settings': {
+      id: '/corp/settings'
+      path: '/corp/settings'
+      fullPath: '/corp/settings'
+      preLoaderRoute: typeof CorpSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/reasoning': {
+      id: '/corp/reasoning'
+      path: '/corp/reasoning'
+      fullPath: '/corp/reasoning'
+      preLoaderRoute: typeof CorpReasoningRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/pipeline': {
+      id: '/corp/pipeline'
+      path: '/corp/pipeline'
+      fullPath: '/corp/pipeline'
+      preLoaderRoute: typeof CorpPipelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/outreach': {
+      id: '/corp/outreach'
+      path: '/corp/outreach'
+      fullPath: '/corp/outreach'
+      preLoaderRoute: typeof CorpOutreachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/import': {
+      id: '/corp/import'
+      path: '/corp/import'
+      fullPath: '/corp/import'
+      preLoaderRoute: typeof CorpImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/customers': {
+      id: '/corp/customers'
+      path: '/corp/customers'
+      fullPath: '/corp/customers'
+      preLoaderRoute: typeof CorpCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/conversations': {
+      id: '/corp/conversations'
+      path: '/corp/conversations'
+      fullPath: '/corp/conversations'
+      preLoaderRoute: typeof CorpConversationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/campaigns': {
+      id: '/corp/campaigns'
+      path: '/corp/campaigns'
+      fullPath: '/corp/campaigns'
+      preLoaderRoute: typeof CorpCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/analytics': {
+      id: '/corp/analytics'
+      path: '/corp/analytics'
+      fullPath: '/corp/analytics'
+      preLoaderRoute: typeof CorpAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corp/agent': {
+      id: '/corp/agent'
+      path: '/corp/agent'
+      fullPath: '/corp/agent'
+      preLoaderRoute: typeof CorpAgentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -225,6 +465,18 @@ const rootRouteChildren: RootRouteChildren = {
   ReasoningRoute: ReasoningRoute,
   SettingsRoute: SettingsRoute,
   WorkspaceRoute: WorkspaceRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  CorpAgentRoute: CorpAgentRoute,
+  CorpAnalyticsRoute: CorpAnalyticsRoute,
+  CorpCampaignsRoute: CorpCampaignsRoute,
+  CorpConversationsRoute: CorpConversationsRoute,
+  CorpCustomersRoute: CorpCustomersRoute,
+  CorpImportRoute: CorpImportRoute,
+  CorpOutreachRoute: CorpOutreachRoute,
+  CorpPipelineRoute: CorpPipelineRoute,
+  CorpReasoningRoute: CorpReasoningRoute,
+  CorpSettingsRoute: CorpSettingsRoute,
+  CorpIndexRoute: CorpIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

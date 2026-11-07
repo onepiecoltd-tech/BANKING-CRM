@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, Query, HTTPException, Request, Response
+from fastapi import FastAPI, Query, HTTPException, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -28,16 +28,34 @@ from src.tools.outreach_tool import send_outreach_message as _send_outreach
 from src.tools.sales_agent import generate_sales_reply, _classify_intent
 from src.rm_agent.graph import build_rm_agent_graph, create_initial_state
 from src.config import settings
+from src.corporate.router import router as corp_router
+from src.corporate.seed import ensure_seed as _corp_seed
+from src.corporate.routers import ALL as _corp_routers
+from src.accounts.router import router as accounts_router
+from src.accounts.deps import auth_middleware, require_admin
 
-app = FastAPI(title="Banking CRM Agent API", version="1.0.0")
+_PROD = os.getenv("CRM_ENV", "").lower() == "production"
+# Bản triển khai thật: ẩn /docs, /openapi.json (không lộ cấu trúc API cho người chưa đăng nhập)
+app = FastAPI(title="Banking CRM Agent API", version="1.0.0",
+              docs_url=None if _PROD else "/docs", redoc_url=None if _PROD else "/redoc",
+              openapi_url=None if _PROD else "/openapi.json")
+
+# Cùng một địa chỉ phục vụ cả giao diện lẫn API nên không cần CORS rộng; đặt CRM_CORS_ORIGINS="https://crm.congty.vn" nếu tách riêng.
+_CORS = [o.strip() for o in os.getenv("CRM_CORS_ORIGINS", "*").split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_CORS,
+    allow_credentials=_CORS != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.middleware("http")(auth_middleware)   # mọi /api/* (trừ health/auth) đều yêu cầu đăng nhập
+app.include_router(accounts_router)
+app.include_router(corp_router)
+for _r in _corp_routers:
+    app.include_router(_r)
 
 # Build LangGraph once at startup
 _agent_graph = None
@@ -56,6 +74,17 @@ _sandbox_sessions: dict = {}   # "+917838146286" → [{"customer_id":..., "produ
 def startup():
     global _agent_graph
     init_db()
+    _corp_seed()
+    try:
+        from src.corporate.demo import ensure_demo_activity
+        ensure_demo_activity()
+    except Exception as _e:  # noqa: BLE001 — dữ liệu mẫu không được làm hỏng khởi động
+        print('demo activity skipped:', _e)
+    try:
+        from src.backup import start_scheduler
+        start_scheduler()
+    except Exception as _e:  # noqa: BLE001
+        print('backup scheduler skipped:', _e)
     _agent_graph = build_rm_agent_graph()
 
 
@@ -1790,7 +1819,7 @@ def get_customer_intelligence(customer_id: str):
 # ── Audit Log ─────────────────────────────────────────────────────────────────
 
 @app.get("/api/audit-log")
-def get_audit_log(limit: int = Query(50, le=200), customer_id: Optional[str] = None):
+def get_audit_log(limit: int = Query(50, le=200), customer_id: Optional[str] = None, _admin=Depends(require_admin)):
     """Retrieve audit log entries."""
     session = SessionLocal()
     try:
@@ -1863,3 +1892,32 @@ def _customer_to_dict(c: Customer) -> dict:
         "products_held": products_held,
         "last_contact_date": c.last_contact_date.isoformat() if c.last_contact_date else None,
     }
+
+
+# ── Phục vụ giao diện (bản triển khai): CRM_FRONTEND_DIST = thư mục dist/client đã build tĩnh ──────────────
+def _mount_frontend():
+    from pathlib import Path
+    from fastapi.responses import FileResponse, JSONResponse
+    root = Path(os.getenv("CRM_FRONTEND_DIST", "")).resolve() if os.getenv("CRM_FRONTEND_DIST") else None
+    if not root or not (root / "_shell.html").exists():
+        return
+    SEC = {"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "same-origin"}
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def _spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            return JSONResponse({"detail": "Không tìm thấy"}, status_code=404)
+        f = (root / full_path).resolve()
+        if full_path and f.is_file() and root in f.parents:       # chặn ../ thoát khỏi thư mục dist
+            h = dict(SEC)
+            if full_path.startswith("assets/"):
+                h["Cache-Control"] = "public, max-age=31536000, immutable"   # tên file có mã băm → cache vĩnh viễn
+            else:
+                h["Cache-Control"] = "no-cache"                               # sw.js, manifest, icon: luôn kiểm tra bản mới
+            return FileResponse(f, headers=h)
+        if "." in full_path.rsplit("/", 1)[-1]:                    # file tĩnh không tồn tại → 404 thật, không trả HTML
+            return JSONResponse({"detail": "Không tìm thấy"}, status_code=404)
+        return FileResponse(root / "_shell.html", headers={**SEC, "Cache-Control": "no-cache"})
+
+
+_mount_frontend()

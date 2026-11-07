@@ -5,6 +5,7 @@ import {
   Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   PieChart, Pie,
 } from "recharts";
+import { t } from "@/lib/i18n";
 
 // ─── Fallback data ─────────────────────────────────────────────────────────────
 
@@ -137,13 +138,13 @@ export function AnalyticsPage() {
   // ── KPI values ─────────────────────────────────────────────────────────────
   const kpiCards = [
     {
-      label: "Total Contacted",
+      label: t("Total Contacted"),
       value: replyRates?.overall?.sent?.toLocaleString() ?? "—",
       color: "text-primary",
       bg: "bg-primary/15",
     },
     {
-      label: "Reply Rate",
+      label: t("Reply Rate"),
       value: replyRates?.overall?.reply_rate != null
         ? `${replyRates.overall.reply_rate.toFixed(1)}%`
         : "—",
@@ -151,7 +152,7 @@ export function AnalyticsPage() {
       bg: "bg-accent/15",
     },
     {
-      label: "Conversion Rate",
+      label: t("Conversion Rate"),
       value: replyRates?.overall?.conversion_rate != null
         ? `${replyRates.overall.conversion_rate.toFixed(1)}%`
         : "—",
@@ -159,13 +160,13 @@ export function AnalyticsPage() {
       bg: "bg-success/15",
     },
     {
-      label: "Churn At Risk",
+      label: t("Churn At Risk"),
       value: churnData?.at_risk_count?.toLocaleString() ?? "—",
       color: "text-destructive",
       bg: "bg-destructive/15",
     },
     {
-      label: "Cross-sell Opps",
+      label: t("Cross-sell Opps"),
       value: crossSell?.total_opportunities?.toLocaleString() ?? "—",
       color: "text-warning",
       bg: "bg-warning/15",
@@ -176,8 +177,8 @@ export function AnalyticsPage() {
     return (
       <div className="space-y-5">
         <PageHeader
-          title="Analytics"
-          subtitle="Deep performance analytics across campaigns, customers, and AI workflows."
+          title={t("Analytics")}
+          subtitle={t("Deep performance analytics across campaigns, customers, and AI workflows.")}
         />
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -196,8 +197,8 @@ export function AnalyticsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Analytics"
-        subtitle="Deep performance analytics across campaigns, customers, and AI workflows."
+        title={t("Analytics")}
+        subtitle={t("Deep performance analytics across campaigns, customers, and AI workflows.")}
       />
 
       {/* KPI Strip */}
@@ -214,7 +215,7 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* 1. Reply Rate by Segment */}
-        <Card title="Reply Rate by Segment" subtitle="How each segment responds to outreach">
+        <Card title={t("Reply Rate by Segment")} subtitle={t("How each segment responds to outreach")}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={replyBySegment}>
               <CartesianGrid stroke="#ffffff10" vertical={false} />
@@ -231,7 +232,7 @@ export function AnalyticsPage() {
         </Card>
 
         {/* 2. Reply Rate by Day of Week */}
-        <Card title="Reply Rate by Day of Week" subtitle="Optimal days for outreach campaigns">
+        <Card title={t("Reply Rate by Day of Week")} subtitle={t("Optimal days for outreach campaigns")}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={replyByDay}>
               <CartesianGrid stroke="#ffffff10" vertical={false} />
@@ -249,7 +250,7 @@ export function AnalyticsPage() {
         </Card>
 
         {/* 3. Conversion Funnel (live) */}
-        <Card title="Conversion Funnel" subtitle="CONTACTED → ENGAGED → INTERESTED → CONVERTED">
+        <Card title={t("Conversion Funnel")} subtitle={t("CONTACTED → ENGAGED → INTERESTED → CONVERTED")}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={funnelData} layout="vertical">
               <CartesianGrid stroke="#ffffff10" horizontal={false} />
@@ -266,7 +267,7 @@ export function AnalyticsPage() {
         </Card>
 
         {/* 4. Churn Risk Distribution */}
-        <Card title="Churn Risk Distribution" subtitle="High / Medium / Low risk customer breakdown">
+        <Card title={t("Churn Risk Distribution")} subtitle={t("High / Medium / Low risk customer breakdown")}>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -296,7 +297,7 @@ export function AnalyticsPage() {
         </Card>
 
         {/* 5. Cross-sell Opportunity Map */}
-        <Card title="Cross-sell Opportunity Map" subtitle="Customers per product opportunity">
+        <Card title={t("Cross-sell Opportunity Map")} subtitle={t("Customers per product opportunity")}>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={crossSellByProduct}>
               <CartesianGrid stroke="#ffffff10" vertical={false} />
@@ -313,7 +314,7 @@ export function AnalyticsPage() {
         </Card>
 
         {/* 6. AI Campaign Scorecard (Radar) */}
-        <Card title="AI Campaign Scorecard" subtitle="Multi-dimensional effectiveness radar">
+        <Card title={t("AI Campaign Scorecard")} subtitle={t("Multi-dimensional effectiveness radar")}>
           <ResponsiveContainer width="100%" height={240}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="#ffffff15" />

@@ -7,11 +7,12 @@ import {
   Zap, MessageSquare, ArrowRight,
 } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip, CartesianGrid, Cell } from "recharts";
+import { t } from "@/lib/i18n";
 
 const FRAMEWORKS = [
-  { id: "AIDA", name: "AIDA", desc: "Attention · Interest · Desire · Action", color: "primary" },
-  { id: "SPIN", name: "SPIN", desc: "Situation · Problem · Implication · Need", color: "accent" },
-  { id: "CIALDINI", name: "Cialdini", desc: "Authority · Scarcity · Social Proof", color: "warning" },
+  { id: "AIDA", name: "AIDA", desc: t("Attention · Interest · Desire · Action"), color: "primary" },
+  { id: "SPIN", name: "SPIN", desc: t("Situation · Problem · Implication · Need"), color: "accent" },
+  { id: "CIALDINI", name: "Cialdini", desc: t("Authority · Scarcity · Social Proof"), color: "warning" },
 ];
 
 const VARIANTS = [
@@ -43,8 +44,8 @@ export function OutreachPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Outreach Center"
-        subtitle="AI-generated personalized WhatsApp campaigns with A/B testing, persuasion frameworks, and compliance suppression."
+        title={t("Outreach Center")}
+        subtitle={t("AI-generated personalized WhatsApp campaigns with A/B testing, persuasion frameworks, and compliance suppression.")}
         actions={
           <button className="text-xs px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground font-medium flex items-center gap-1.5 hover:opacity-90">
             <Send className="w-3.5 h-3.5" /> New Campaign
@@ -58,11 +59,11 @@ export function OutreachPage() {
           <div className="text-sm font-semibold flex items-center gap-2">
             <Zap className="w-4 h-4 text-primary" /> Audience
           </div>
-          <div className="text-xs text-muted-foreground">High-value, loan-eligible · Mumbai</div>
+          <div className="text-xs text-muted-foreground">{t("High-value, loan-eligible · Mumbai")}</div>
 
           <div className="grid grid-cols-2 gap-2 text-center">
-            <Stat label="Eligible" value={eligible} accent="success" />
-            <Stat label="Suppressed" value={suppressed} accent="warning" />
+            <Stat label={t("Eligible")} value={eligible} accent="success" />
+            <Stat label={t("Suppressed")} value={suppressed} accent="warning" />
           </div>
 
           <div className="rounded-lg bg-muted/30 p-3">
@@ -70,15 +71,15 @@ export function OutreachPage() {
               <Shield className="w-3 h-3" /> Suppression checks (last 24h)
             </div>
             <ul className="space-y-1 text-[11px]">
-              <li className="flex justify-between"><span>DND list</span><span className="text-warning font-mono">2 blocked</span></li>
-              <li className="flex justify-between"><span>Frequency cap (14d)</span><span className="text-warning font-mono">1 blocked</span></li>
-              <li className="flex justify-between"><span>Opt-out registry</span><span className="text-warning font-mono">1 blocked</span></li>
-              <li className="flex justify-between"><span>Quiet hours filter</span><span className="text-success font-mono">passed</span></li>
+              <li className="flex justify-between"><span>{t("DND list")}</span><span className="text-warning font-mono">{t("2 blocked")}</span></li>
+              <li className="flex justify-between"><span>{t("Frequency cap (14d)")}</span><span className="text-warning font-mono">{t("1 blocked")}</span></li>
+              <li className="flex justify-between"><span>{t("Opt-out registry")}</span><span className="text-warning font-mono">{t("1 blocked")}</span></li>
+              <li className="flex justify-between"><span>{t("Quiet hours filter")}</span><span className="text-success font-mono">{t("passed")}</span></li>
             </ul>
           </div>
 
           <div>
-            <div className="text-[10px] text-muted-foreground mb-1">Top scored audience</div>
+            <div className="text-[10px] text-muted-foreground mb-1">{t("Top scored audience")}</div>
             <ResponsiveContainer width="100%" height={140}>
               <BarChart data={audienceData}>
                 <CartesianGrid stroke="#ffffff08" vertical={false} />
@@ -100,11 +101,11 @@ export function OutreachPage() {
             <div className="text-sm font-semibold flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" /> AI Message Composer
             </div>
-            <div className="text-[10px] text-muted-foreground">Personalization tokens active</div>
+            <div className="text-[10px] text-muted-foreground">{t("Personalization tokens active")}</div>
           </div>
 
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Persuasion Framework</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">{t("Persuasion Framework")}</div>
             <div className="grid grid-cols-3 gap-2">
               {FRAMEWORKS.map((f) => (
                 <button
@@ -153,8 +154,8 @@ export function OutreachPage() {
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-border">
-                  <Mini label="Est. response" value={`${v.estResponse}%`} />
-                  <Mini label="Est. conversion" value={`${v.estConv}%`} />
+                  <Mini label={t("Est. response")} value={`${v.estResponse}%`} />
+                  <Mini label={t("Est. conversion")} value={`${v.estConv}%`} />
                 </div>
                 <div className="flex gap-1 mt-2">
                   <button className="flex-1 text-[10px] py-1 rounded bg-muted/60 hover:bg-muted flex items-center justify-center gap-1">
@@ -171,8 +172,8 @@ export function OutreachPage() {
           <div className="rounded-lg border border-border bg-card/40 p-3 flex items-center gap-3">
             <Calendar className="w-4 h-4 text-accent" />
             <div className="flex-1">
-              <div className="text-xs font-medium">Send-time optimization</div>
-              <div className="text-[10px] text-muted-foreground">AI predicted optimal window: <span className="text-foreground">Tue 11:30 AM IST</span> (+38% open vs. baseline)</div>
+              <div className="text-xs font-medium">{t("Send-time optimization")}</div>
+              <div className="text-[10px] text-muted-foreground">{t("AI predicted optimal window:")} <span className="text-foreground">{t("Tue 11:30 AM IST")}</span> {t("(+38% open vs. baseline)")}</div>
             </div>
             <button className="text-xs px-3 py-1.5 rounded-lg gradient-primary text-primary-foreground font-medium flex items-center gap-1">
               Schedule <ArrowRight className="w-3 h-3" />
@@ -187,7 +188,7 @@ export function OutreachPage() {
           <div className="text-sm font-semibold flex items-center gap-2">
             <MessageSquare className="w-4 h-4 text-accent" /> Active Campaigns
           </div>
-          <div className="text-[10px] text-muted-foreground">14 running · 2 paused</div>
+          <div className="text-[10px] text-muted-foreground">{t("14 running · 2 paused")}</div>
         </div>
         <div className="space-y-2">
           {[
@@ -198,13 +199,13 @@ export function OutreachPage() {
           ].map((c) => (
             <div key={c.name} className="grid grid-cols-12 items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border hover:border-primary/30 transition">
               <div className="col-span-12 md:col-span-3 text-sm font-medium">{c.name}</div>
-              <Cell2 label="Sent" value={c.sent} />
-              <Cell2 label="Opened" value={c.opened} />
-              <Cell2 label="Replied" value={c.replied} />
-              <Cell2 label="Converted" value={c.conv} accent />
-              <Cell2 label="Value" value={formatINR(c.value)} />
+              <Cell2 label={t("Sent")} value={c.sent} />
+              <Cell2 label={t("Opened")} value={c.opened} />
+              <Cell2 label={t("Replied")} value={c.replied} />
+              <Cell2 label={t("Converted")} value={c.conv} accent />
+              <Cell2 label={t("Value")} value={formatINR(c.value)} />
               <div className="col-span-12 md:col-span-1 flex justify-end">
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-medium">Live</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-medium">{t("Live")}</span>
               </div>
             </div>
           ))}

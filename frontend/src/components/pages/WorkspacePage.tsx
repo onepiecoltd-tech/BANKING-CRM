@@ -12,6 +12,7 @@ import {
   MessageSquare, Activity, ChevronDown, ChevronRight, Zap, AlertCircle,
   Cloud, Server, Cpu, ChevronUp, Settings2, X, Phone, History, Clock, Trash2,
 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 type ChatMessage = {
   id: string;
@@ -89,7 +90,7 @@ const MODELS: ModelOption[] = [
   // ── NVIDIA NIM (cloud, free tier) ─────────────────────────────────────────
   {
     id: "nvidia-llama70b",
-    label: "Llama 3.1 70B",
+    label: t("Llama 3.1 70B"),
     sublabel: "nvidia nim · llama-3.1-70b-instruct",
     backend: "nvidia",
     nvidia_model: "meta/llama-3.1-70b-instruct",
@@ -101,7 +102,7 @@ const MODELS: ModelOption[] = [
   },
   {
     id: "nvidia-nemotron",
-    label: "Nemotron 70B",
+    label: t("Nemotron 70B"),
     sublabel: "nvidia nim · llama-3.1-nemotron-70b",
     backend: "nvidia",
     nvidia_model: "nvidia/llama-3.1-nemotron-70b-instruct",
@@ -113,7 +114,7 @@ const MODELS: ModelOption[] = [
   },
   {
     id: "nvidia-mixtral",
-    label: "Mixtral 8x7B",
+    label: t("Mixtral 8x7B"),
     sublabel: "nvidia nim · mixtral-8x7b-instruct",
     backend: "nvidia",
     nvidia_model: "mistralai/mixtral-8x7b-instruct-v0.1",
@@ -126,7 +127,7 @@ const MODELS: ModelOption[] = [
   // ── Gemini ─────────────────────────────────────────────────────────────────
   {
     id: "gemini-flash",
-    label: "Gemini Flash",
+    label: t("Gemini Flash"),
     sublabel: "google · gemini-flash-latest",
     backend: "gemini",
     icon: "cloud",
@@ -138,7 +139,7 @@ const MODELS: ModelOption[] = [
   // ── Ollama (local) ─────────────────────────────────────────────────────────
   {
     id: "ollama-gemma3",
-    label: "Gemma 3 4B",
+    label: t("Gemma 3 4B"),
     sublabel: "ollama · gemma3:4b",
     backend: "ollama",
     ollama_model: "gemma3:4b",
@@ -150,7 +151,7 @@ const MODELS: ModelOption[] = [
   },
   {
     id: "ollama-llama3",
-    label: "Llama 3.1 8B",
+    label: t("Llama 3.1 8B"),
     sublabel: "ollama · llama3.1:8b",
     backend: "ollama",
     ollama_model: "llama3.1:8b",
@@ -226,11 +227,11 @@ function ModelCard({ model, selected, onClick }: { model: ModelOption; selected:
           <div className="text-[10px] text-muted-foreground mt-0.5">{model.sublabel}</div>
           <div className="flex items-center gap-3 mt-1.5">
             <div className="flex items-center gap-1">
-              <span className="text-[9px] text-muted-foreground">Speed</span>
+              <span className="text-[9px] text-muted-foreground">{t("Speed")}</span>
               <Dots count={3} filled={model.speed} />
             </div>
             <div className="flex items-center gap-1">
-              <span className="text-[9px] text-muted-foreground">Quality</span>
+              <span className="text-[9px] text-muted-foreground">{t("Quality")}</span>
               <Dots count={3} filled={model.quality} />
             </div>
           </div>
@@ -269,9 +270,9 @@ function ModelPicker({
             {/* Split toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-semibold">Model Configuration</div>
+                <div className="text-xs font-semibold">{t("Model Configuration")}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">
-                  Use different models for planning vs execution
+                  {t("Use different models for planning vs execution")}
                 </div>
               </div>
               <button
@@ -290,7 +291,7 @@ function ModelPicker({
             {!splitMode ? (
               <div className="space-y-1.5">
                 <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-2">
-                  All nodes
+                  {t("All nodes")}
                 </div>
                 {MODELS.map((m) => (
                   <ModelCard key={m.id} model={m} selected={globalModel === m.id} onClick={() => setGlobalModel(m.id)} />
@@ -322,7 +323,7 @@ function ModelPicker({
             )}
 
             <div className="pt-1 border-t border-border text-[10px] text-muted-foreground">
-              Local models require Ollama running at localhost:11434
+              {t("Local models require Ollama running at localhost:11434")}
             </div>
           </motion.div>
         </>
@@ -339,14 +340,14 @@ function MvpNote() {
     <div className="text-[10px] bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-1.5 flex-shrink-0">
       <div className="flex items-center gap-2">
         <span className="text-amber-400/80">
-          <span className="font-semibold">⚠ MVP Note:</span>{" "}
-          Customer queries sample <strong>50 from 500</strong> candidates in insertion order — not necessarily the best 50.
+          <span className="font-semibold">{t("⚠ MVP Note:")}</span>{" "}
+          Customer queries sample <strong>{t("50 from 500")}</strong> candidates in insertion order — not necessarily the best 50.
         </span>
         <button
           onClick={() => setOpen((v) => !v)}
           className="ml-auto text-amber-400 underline underline-offset-2 whitespace-nowrap hover:text-amber-300 transition-colors"
         >
-          {open ? "Hide" : "Read more"}
+          {open ? t("Hide") : t("Read more")}
         </button>
       </div>
 
@@ -361,16 +362,16 @@ function MvpNote() {
           >
             <div className="mt-2 pt-2 border-t border-amber-500/20 space-y-2 text-amber-200/70 leading-relaxed">
               <p>
-                <span className="text-amber-400 font-semibold">What's broken now:</span>{" "}
+                <span className="text-amber-400 font-semibold">{t("What's broken now:")}</span>{" "}
                 <code className="bg-amber-500/10 px-1 rounded">query_customers(limit=50)</code> fetches the first 50 rows in DB insertion order — not ranked by value or relevance. The agent then scores only those 50, so high-value customers beyond row 50 are never seen.
               </p>
               <p>
-                <span className="text-amber-400 font-semibold">Quick fix (no infra change):</span>{" "}
-                Add <code className="bg-amber-500/10 px-1 rounded">ORDER BY credit_score DESC, annual_income DESC</code> before the LIMIT so the sample is always the financially strongest 50, not an arbitrary 50.
+                <span className="text-amber-400 font-semibold">{t("Quick fix (no infra change):")}</span>{" "}
+                Add <code className="bg-amber-500/10 px-1 rounded">{t("ORDER BY credit_score DESC, annual_income DESC")}</code> before the LIMIT so the sample is always the financially strongest 50, not an arbitrary 50.
               </p>
               <p>
-                <span className="text-amber-400 font-semibold">Proper fix (scalable to 1M+ customers):</span>{" "}
-                Embed each customer profile as a vector (e.g. OpenAI <code className="bg-amber-500/10 px-1 rounded">text-embedding-3-small</code>) and store in pgvector / Pinecone. When the agent runs a query, embed the intent ("high-value personal loan conversion") and retrieve the top-K most semantically similar profiles via ANN search — bypassing the LIMIT entirely and finding the right customers regardless of portfolio size.
+                <span className="text-amber-400 font-semibold">{t("Proper fix (scalable to 1M+ customers):")}</span>{" "}
+                Embed each customer profile as a vector (e.g. OpenAI <code className="bg-amber-500/10 px-1 rounded">{t("text-embedding-3-small")}</code>) and store in pgvector / Pinecone. When the agent runs a query, embed the intent ("high-value personal loan conversion") and retrieve the top-K most semantically similar profiles via ANN search — bypassing the LIMIT entirely and finding the right customers regardless of portfolio size.
               </p>
             </div>
           </motion.div>
@@ -531,8 +532,8 @@ export function WorkspacePage() {
       <MvpNote />
 
       <PageHeader
-        title="RM AI Workspace"
-        subtitle="Your AI copilot for portfolio actions. Plans, calls tools, reasons, and drafts outreach in real time."
+        title={t("RM AI Workspace")}
+        subtitle={t("Your AI copilot for portfolio actions. Plans, calls tools, reasons, and drafts outreach in real time.")}
         actions={
           <div className="flex items-center gap-3">
             {/* Model picker trigger */}
@@ -544,7 +545,7 @@ export function WorkspacePage() {
                 {activeIcon}
                 <span className="max-w-[160px] truncate font-medium">{activeLabel}</span>
                 {splitMode && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">SPLIT</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-semibold">{t("SPLIT")}</span>
                 )}
                 {pickerOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
               </button>
@@ -560,7 +561,7 @@ export function WorkspacePage() {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground glass px-3 py-1.5 rounded-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" />
-              LangGraph Agent
+              {t("LangGraph Agent")}
             </div>
           </div>
         }
@@ -575,9 +576,9 @@ export function WorkspacePage() {
                 <div className="w-14 h-14 rounded-2xl gradient-primary grid place-items-center glow mb-4">
                   <Sparkles className="w-7 h-7 text-primary-foreground" />
                 </div>
-                <h2 className="text-xl font-display font-semibold">How can I help you today?</h2>
+                <h2 className="text-xl font-display font-semibold">{t("How can I help you today?")}</h2>
                 <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                  Ask anything about your portfolio. The real LangGraph agent will plan, call tools, and draft outreach.
+                  {t("Ask anything about your portfolio. The real LangGraph agent will plan, call tools, and draft outreach.")}
                 </p>
                 <div className="grid sm:grid-cols-2 gap-2 mt-6 max-w-2xl w-full">
                   {SUGGESTED.map((s) => (
@@ -609,7 +610,7 @@ export function WorkspacePage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
-                  placeholder={running ? "Agent working… this may take 20-60 seconds" : "Ask the agent…"}
+                  placeholder={running ? t("Agent working… this may take 20-60 seconds") : t("Ask the agent…")}
                   disabled={running}
                   rows={1}
                   className="w-full bg-input/60 border border-border rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 resize-none"
@@ -632,7 +633,7 @@ export function WorkspacePage() {
           {/* Tab bar */}
           <div className="flex border-b border-border">
             {[
-              { id: "workflow" as const, icon: Activity, label: "Workflow" },
+              { id: "workflow" as const, icon: Activity, label: t("Workflow") },
               { id: "history" as const, icon: History, label: `History${history.length > 0 ? ` (${history.length})` : ""}` },
             ].map((tab) => (
               <button
@@ -669,7 +670,7 @@ export function WorkspacePage() {
                   </span>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground mb-3">Live LangGraph execution</div>
+              <div className="text-xs text-muted-foreground mb-3">{t("Live LangGraph execution")}</div>
 
               {/* Live streaming node progress */}
               {(running || liveNodes.length > 0) && (
@@ -696,7 +697,7 @@ export function WorkspacePage() {
                     </div>
                   ))}
                   {running && liveNodes.length > 0 && liveNodes[liveNodes.length - 1]?.status === "running" && (
-                    <div className="text-[10px] text-muted-foreground px-1 animate-pulse">Agent is working…</div>
+                    <div className="text-[10px] text-muted-foreground px-1 animate-pulse">{t("Agent is working…")}</div>
                   )}
                 </div>
               )}
@@ -704,7 +705,7 @@ export function WorkspacePage() {
               {/* Tool calls fired */}
               {liveTools.length > 0 && (
                 <div className="mb-4">
-                  <div className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">Tools called</div>
+                  <div className="text-[10px] text-muted-foreground mb-1.5 font-medium uppercase tracking-wide">{t("Tools called")}</div>
                   <div className="flex flex-wrap gap-1">
                     {/* Dedupe tool names, show unique only */}
                     {Array.from(new Map(liveTools.map(t => [t.name, t])).values()).map((t, i) => (
@@ -743,7 +744,7 @@ export function WorkspacePage() {
                   <div className="flex-1 overflow-y-auto p-3 space-y-3">
                     {viewingSession.messages.map((m) => (
                       <div key={m.id} className={`text-xs rounded-lg p-2.5 ${m.role === "user" ? "bg-primary/10 border border-primary/20 ml-4" : "bg-muted/40 border border-border mr-4"}`}>
-                        <div className="text-[10px] text-muted-foreground mb-1 font-medium">{m.role === "user" ? "You" : "AI Agent"}</div>
+                        <div className="text-[10px] text-muted-foreground mb-1 font-medium">{m.role === "user" ? t("You") : t("AI Agent")}</div>
                         <div className="leading-relaxed line-clamp-6">{m.content || (m.error ? `Error: ${m.error}` : "…")}</div>
                       </div>
                     ))}
@@ -753,7 +754,7 @@ export function WorkspacePage() {
                       onClick={() => { setMessages(viewingSession.messages); setViewingSession(null); setRightTab("workflow"); }}
                       className="w-full text-xs py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition font-medium"
                     >
-                      Restore this session
+                      {t("Restore this session")}
                     </button>
                   </div>
                 </div>
@@ -763,7 +764,7 @@ export function WorkspacePage() {
                   {history.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-3">
                       <History className="w-10 h-10 text-muted-foreground/30" />
-                      <div className="text-xs text-muted-foreground">No sessions yet.<br />Your workspace conversations will appear here.</div>
+                      <div className="text-xs text-muted-foreground">{t("No sessions yet.")}<br />{t("Your workspace conversations will appear here.")}</div>
                     </div>
                   ) : (
                     <>
@@ -832,7 +833,7 @@ function MessageBubble({ msg, isRunning }: { msg: ChatMessage; isRunning: boolea
           {showSpinner && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Agent is thinking… planning and calling tools
+              {t("Agent is thinking… planning and calling tools")}
             </div>
           )}
           {msg.steps && msg.steps.length > 0 && <ReasoningTrace steps={msg.steps} />}
@@ -840,7 +841,7 @@ function MessageBubble({ msg, isRunning }: { msg: ChatMessage; isRunning: boolea
             <div className="flex items-start gap-2 text-xs text-destructive rounded-lg border border-destructive/30 bg-destructive/5 p-3">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <div>
-                <div className="font-medium mb-0.5">Agent error</div>
+                <div className="font-medium mb-0.5">{t("Agent error")}</div>
                 <div className="text-muted-foreground">{msg.error}</div>
               </div>
             </div>
@@ -864,7 +865,7 @@ function ReasoningTrace({ steps }: { steps: AgentStep[] }) {
       >
         {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
         <Brain className="w-3.5 h-3.5 text-primary" />
-        Reasoning trace
+        {t("Reasoning trace")}
         <span className="text-muted-foreground font-normal">· {steps.length} steps</span>
       </button>
       <AnimatePresence>
@@ -906,11 +907,11 @@ function StepRow({ step, index }: { step: AgentStep; index: number }) {
           {step.toolCall && (
             <div className="grid grid-cols-2 gap-2 mt-1">
               <div className="rounded bg-muted/40 p-2 font-mono text-[10px] overflow-x-auto">
-                <div className="text-primary mb-1">input</div>
+                <div className="text-primary mb-1">{t("input")}</div>
                 <pre>{JSON.stringify(step.toolCall.input, null, 2)}</pre>
               </div>
               <div className="rounded bg-muted/40 p-2 font-mono text-[10px] overflow-x-auto">
-                <div className="text-accent mb-1">output</div>
+                <div className="text-accent mb-1">{t("output")}</div>
                 <pre className="whitespace-pre-wrap">{JSON.stringify(step.toolCall.output, null, 2)?.slice(0, 300)}</pre>
               </div>
             </div>
@@ -961,13 +962,13 @@ function WhatsAppQRPanel() {
       <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2.5 text-[10px] text-muted-foreground space-y-1">
         <div className="font-semibold text-xs flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-          WhatsApp Web service not running
+          {t("WhatsApp Web service not running")}
         </div>
-        <p>Start it in a new terminal:</p>
+        <p>{t("Start it in a new terminal:")}</p>
         <code className="block bg-background rounded px-2 py-1 font-mono text-[10px] border border-border/40">
           cd banking-crm-backend/whatsapp-service && node server.js
         </code>
-        <p className="text-[9px]">Then scan the QR code that appears in the terminal with WhatsApp → Linked Devices.</p>
+        <p className="text-[9px]">{t("Then scan the QR code that appears in the terminal with WhatsApp → Linked Devices.")}</p>
       </div>
     );
   }
@@ -976,7 +977,7 @@ function WhatsAppQRPanel() {
     return (
       <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-400/5 border border-emerald-400/20 rounded-lg px-3 py-2">
         <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-        <span>WhatsApp connected — messages will be sent from your account</span>
+        <span>{t("WhatsApp connected — messages will be sent from your account")}</span>
       </div>
     );
   }
@@ -986,8 +987,8 @@ function WhatsAppQRPanel() {
     const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(status.qr)}`;
     return (
       <div className="rounded-lg border border-border/40 p-3 space-y-2 text-center">
-        <p className="text-[10px] text-muted-foreground">Scan with WhatsApp → Linked Devices</p>
-        <img src={qrImg} alt="WhatsApp QR" className="w-36 h-36 mx-auto rounded border border-border/30" />
+        <p className="text-[10px] text-muted-foreground">{t("Scan with WhatsApp → Linked Devices")}</p>
+        <img src={qrImg} alt={t("WhatsApp QR")} className="w-36 h-36 mx-auto rounded border border-border/30" />
         <div className="flex items-center justify-center gap-1.5 text-[10px] text-amber-400">
           <Loader2 className="w-3 h-3 animate-spin" /> Waiting for scan…
         </div>
@@ -1079,9 +1080,9 @@ function SendModal({
   const sentCount = rows.filter((r) => r.sendResult?.status?.startsWith("sent")).length;
 
   const TABS: { id: BackendTab; label: string; badge: string; color: string }[] = [
-    { id: "whatsapp-web", label: "WhatsApp Web", badge: "Free", color: "text-emerald-400 border-emerald-400/40 bg-emerald-400/5" },
-    { id: "twilio",       label: "Twilio API",   badge: "Pro",  color: "text-blue-400 border-blue-400/40 bg-blue-400/5" },
-    { id: "mock",         label: "Mock / Log",   badge: "Dev",  color: "text-muted-foreground border-border bg-muted/20" },
+    { id: "whatsapp-web", label: t("WhatsApp Web"), badge: "Free", color: "text-emerald-400 border-emerald-400/40 bg-emerald-400/5" },
+    { id: "twilio",       label: t("Twilio API"),   badge: "Pro",  color: "text-blue-400 border-blue-400/40 bg-blue-400/5" },
+    { id: "mock",         label: t("Mock / Log"),   badge: "Dev",  color: "text-muted-foreground border-border bg-muted/20" },
   ];
 
   return createPortal(
@@ -1107,7 +1108,7 @@ function SendModal({
           <div className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5 mb-4">
             <div>
               <p className="text-xs font-semibold">
-                {sandbox ? "🧪 Sandbox Mode" : "🚀 Production Mode"}
+                {sandbox ? t("🧪 Sandbox Mode") : t("🚀 Production Mode")}
               </p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {sandbox
@@ -1133,7 +1134,7 @@ function SendModal({
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2">
               <Phone className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-[9px] text-amber-400 font-semibold uppercase tracking-wide mb-0.5">Test number — all messages go here</p>
+                <p className="text-[9px] text-amber-400 font-semibold uppercase tracking-wide mb-0.5">{t("Test number — all messages go here")}</p>
                 <input
                   type="tel"
                   value={sandboxNumber}
@@ -1147,7 +1148,7 @@ function SendModal({
 
         {/* Backend tabs */}
         <div>
-          <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">Send via</p>
+          <p className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">{t("Send via")}</p>
           <div className="flex gap-1.5">
             {TABS.map((t) => (
               <button
@@ -1179,25 +1180,25 @@ function SendModal({
                   <>
                     <span className="flex items-center gap-1.5 font-semibold">
                       <CheckCircle2 className="w-3 h-3" />
-                      Twilio connected · Sandbox +14155238886
+                      {t("Twilio connected · Sandbox +14155238886")}
                     </span>
                     <p className="text-[9px] opacity-80">
-                      Sends via <strong>Content Template</strong> with 3 quick-reply buttons (✅ Yes · 📞 Call Me · ❌ Not Now).
+                      Sends via <strong>{t("Content Template")}</strong> with 3 quick-reply buttons (✅ Yes · 📞 Call Me · ❌ Not Now).
                       Variables auto-filled from customer loan details.
                     </p>
-                    <p className="text-[9px] opacity-60 font-mono">Template SID: HX2bc78adf93fb63c4b571799910d53776</p>
+                    <p className="text-[9px] opacity-60 font-mono">{t("Template SID: HX2bc78adf93fb63c4b571799910d53776")}</p>
                   </>
                 ) : (
                   <span>
-                    Twilio credentials missing. Add <code className="font-mono">TWILIO_ACCOUNT_SID</code>,{" "}
-                    <code className="font-mono">TWILIO_AUTH_TOKEN</code> to <code className="font-mono">.env</code>.
+                    Twilio credentials missing. Add <code className="font-mono">{t("TWILIO_ACCOUNT_SID")}</code>,{" "}
+                    <code className="font-mono">{t("TWILIO_AUTH_TOKEN")}</code> {t("to")} <code className="font-mono">.env</code>.
                   </span>
                 )}
               </div>
             )}
             {activeTab === "mock" && (
               <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-[10px] text-muted-foreground">
-                Messages are logged to the CRM database but not delivered. Safe for dev and demos.
+                {t("Messages are logged to the CRM database but not delivered. Safe for dev and demos.")}
               </div>
             )}
           </div>
@@ -1228,7 +1229,7 @@ function SendModal({
                     <span className="flex items-center gap-1 text-emerald-400 text-[10px]">
                       <CheckCircle2 className="w-3 h-3" />
                       {res?.backend === "whatsapp-web" ? "Sent via WhatsApp" :
-                       res?.backend === "twilio"       ? "Sent via Twilio" : "Logged"}
+                       res?.backend === "twilio"       ? t("Sent via Twilio") : t("Logged")}
                     </span>
                   )}
                   {isErr && (
@@ -1242,8 +1243,8 @@ function SendModal({
                 {sandbox ? (
                   <div className="flex items-center gap-2 text-[10px] text-amber-400/80">
                     <Phone className="w-3 h-3 flex-shrink-0" />
-                    <span>CRM: <span className="font-mono line-through opacity-50">{r.phone || "no number"}</span></span>
-                    <span className="text-amber-400">→ redirected to <span className="font-mono">{sandboxNumber}</span></span>
+                    <span>{t("CRM:")} <span className="font-mono line-through opacity-50">{r.phone || "no number"}</span></span>
+                    <span className="text-amber-400">{t("→ redirected to")} <span className="font-mono">{sandboxNumber}</span></span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -1265,11 +1266,11 @@ function SendModal({
                     <div className="w-5 h-5 rounded-full bg-[#25d366] flex items-center justify-center flex-shrink-0">
                       <svg viewBox="0 0 24 24" className="w-3 h-3 fill-white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.533 5.859L.057 23.486a.5.5 0 00.636.606l5.82-1.527A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.693-.484-5.25-1.334l-.374-.214-3.875 1.016 1.035-3.77-.234-.389A9.957 9.957 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
                     </div>
-                    <span className="text-[9px] text-[#25d366] font-semibold">BankingRM AI</span>
+                    <span className="text-[9px] text-[#25d366] font-semibold">{t("BankingRM AI")}</span>
                     {activeTab === "twilio" && (
-                      <span className="text-[8px] text-blue-400 border border-blue-400/30 px-1 py-0.5 rounded ml-1">Twilio template</span>
+                      <span className="text-[8px] text-blue-400 border border-blue-400/30 px-1 py-0.5 rounded ml-1">{t("Twilio template")}</span>
                     )}
-                    <span className="text-[9px] text-white/30 ml-auto">Preview</span>
+                    <span className="text-[9px] text-white/30 ml-auto">{t("Preview")}</span>
                   </div>
                   <div
                     className="text-[11px] leading-relaxed text-white/90 whitespace-pre-line"
@@ -1316,7 +1317,7 @@ function SendModal({
                 className="flex-1 text-xs px-4 py-2.5 rounded-lg gradient-primary text-primary-foreground font-medium flex items-center justify-center gap-1.5 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {sending ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending…</>
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t("Sending…")}</>
                 ) : (
                   <><Send className="w-3.5 h-3.5" />
                     {sandbox
@@ -1326,7 +1327,7 @@ function SendModal({
                 )}
               </button>
               <button onClick={onClose} className="text-xs px-4 py-2.5 rounded-lg border border-border bg-muted/40 hover:bg-muted/60">
-                Cancel
+                {t("Cancel")}
               </button>
             </>
           ) : (
@@ -1413,7 +1414,7 @@ function DraftsCard({ drafts }: { drafts: AgentResult["drafts"] }) {
             <Send className="w-3 h-3" /> Send to all customers
           </button>
           <button className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted/60">
-            Schedule cadence
+            {t("Schedule cadence")}
           </button>
         </div>
       </div>
@@ -1442,7 +1443,7 @@ function CustomersCard({ customers }: { customers: AgentResult["customers"] }) {
           </div>
           <div className="text-right flex-shrink-0">
             <div className="font-mono">{c.credit_score}</div>
-            <div className="text-[10px] text-muted-foreground">credit</div>
+            <div className="text-[10px] text-muted-foreground">{t("credit")}</div>
           </div>
         </div>
       ))}
@@ -1463,7 +1464,7 @@ function WorkflowMini({ running, steps, splitMode, plannerModel, executorModel, 
 
   const nodes = [
     {
-      label: "Planner",
+      label: t("Planner"),
       model: splitMode ? modelById(plannerModel).label : modelById(globalModel).label,
       color: "primary",
       done: planSteps.length > 0,
@@ -1475,7 +1476,7 @@ function WorkflowMini({ running, steps, splitMode, plannerModel, executorModel, 
       done: true,
     })),
     {
-      label: "Responder",
+      label: t("Responder"),
       model: splitMode ? modelById(plannerModel).label : modelById(globalModel).label,
       color: "primary",
       done: !running && (steps?.length ?? 0) > 0,
@@ -1487,7 +1488,7 @@ function WorkflowMini({ running, steps, splitMode, plannerModel, executorModel, 
       {running && nodes.length <= 1 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground py-4 justify-center">
           <Loader2 className="w-4 h-4 animate-spin" />
-          Waiting for agent…
+          {t("Waiting for agent…")}
         </div>
       )}
       {nodes.map((n, i) => (

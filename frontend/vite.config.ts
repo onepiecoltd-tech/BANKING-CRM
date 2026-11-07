@@ -8,11 +8,16 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
+// STATIC_SPA=1 npm run build  → bản tĩnh (dist/client) để Caddy/Nginx phục vụ, không cần Cloudflare/SSR.
+const staticSpa = process.env.STATIC_SPA === "1";
+
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
-  },
+  ...(staticSpa ? { cloudflare: false as const } : {}),
+  tanstackStart: staticSpa
+    ? { spa: { enabled: true } }
+    : { server: { entry: "server" } },
   vite: {
+    preview: { host: "127.0.0.1" },
     server: {
       proxy: {
         "/api": {

@@ -1,19 +1,20 @@
 import { PageHeader, tooltipStyle } from "./DashboardPage";
 import { PLAYBOOK_STEPS } from "@/lib/agentSim";
 import { Brain, Wrench, Sparkles, MessageSquare, Network, CheckCircle2 } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export function ReasoningPage() {
   const nodes = [
-    { id: "user", label: "User Query", x: 50, y: 50, type: "io" },
-    { id: "planner", label: "Planner", x: 220, y: 50, type: "plan" },
+    { id: "user", label: t("User Query"), x: 50, y: 50, type: "io" },
+    { id: "planner", label: t("Planner"), x: 220, y: 50, type: "plan" },
     { id: "query", label: "query_customers", x: 400, y: 20, type: "tool" },
     { id: "score", label: "score_value", x: 400, y: 90, type: "tool" },
     { id: "predict", label: "predict_conversion", x: 580, y: 20, type: "tool" },
     { id: "recommend", label: "recommend_products", x: 580, y: 90, type: "tool" },
     { id: "supp", label: "check_suppressions", x: 760, y: 50, type: "tool" },
-    { id: "reflect", label: "Reflection", x: 920, y: 50, type: "reflect" },
+    { id: "reflect", label: t("Reflection"), x: 920, y: 50, type: "reflect" },
     { id: "draft", label: "draft_outreach", x: 1080, y: 50, type: "tool" },
-    { id: "synth", label: "Synthesizer", x: 1240, y: 50, type: "respond" },
+    { id: "synth", label: t("Synthesizer"), x: 1240, y: 50, type: "respond" },
   ];
   const edges = [
     ["user","planner"],["planner","query"],["planner","score"],["query","predict"],["score","recommend"],
@@ -26,11 +27,11 @@ export function ReasoningPage() {
     <div className="space-y-5">
       <PageHeader
         title="Reasoning & Tool Trace"
-        subtitle="Inspect the agent's decision graph, tool calls, state transitions, and confidence over time."
+        subtitle={t("Inspect the agent's decision graph, tool calls, state transitions, and confidence over time.")}
         actions={
           <div className="text-xs px-3 py-1.5 rounded-lg glass flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" />
-            LangGraph v0.2 · Trace #47281
+            {t("LangGraph v0.2 · Trace #47281")}
           </div>
         }
       />
@@ -39,7 +40,7 @@ export function ReasoningPage() {
       <div className="glass rounded-xl p-5 shadow-card">
         <div className="flex items-center gap-2 mb-3">
           <Network className="w-4 h-4 text-primary" />
-          <div className="text-sm font-semibold">Orchestration Graph</div>
+          <div className="text-sm font-semibold">{t("Orchestration Graph")}</div>
         </div>
         <div className="overflow-x-auto grid-pattern rounded-lg">
           <svg viewBox="0 0 1320 140" className="w-full min-w-[1100px] h-[180px]">
@@ -67,7 +68,7 @@ export function ReasoningPage() {
       {/* Timeline */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 glass rounded-xl p-5 shadow-card">
-          <div className="text-sm font-semibold mb-4">Execution Timeline</div>
+          <div className="text-sm font-semibold mb-4">{t("Execution Timeline")}</div>
           <div className="space-y-2">
             {PLAYBOOK_STEPS.map((s, i) => {
               const Icon = s.type === "plan" ? Brain : s.type === "tool" ? Wrench : s.type === "reflect" ? Sparkles : MessageSquare;
@@ -88,8 +89,8 @@ export function ReasoningPage() {
                     <div className="text-[11px] text-muted-foreground mt-0.5">{s.detail}</div>
                     {s.toolCall && (
                       <div className="mt-1.5 grid grid-cols-2 gap-2">
-                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-primary">in:</span> {JSON.stringify(s.toolCall.input)}</pre>
-                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-accent">out:</span> {JSON.stringify(s.toolCall.output)}</pre>
+                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-primary">{t("in:")}</span> {JSON.stringify(s.toolCall.input)}</pre>
+                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-accent">{t("out:")}</span> {JSON.stringify(s.toolCall.output)}</pre>
                       </div>
                     )}
                   </div>
@@ -101,7 +102,7 @@ export function ReasoningPage() {
 
         <div className="space-y-4">
           <div className="glass rounded-xl p-5 shadow-card">
-            <div className="text-sm font-semibold mb-3">State Memory</div>
+            <div className="text-sm font-semibold mb-3">{t("State Memory")}</div>
             <pre className="text-[10px] font-mono p-3 rounded bg-muted/40 overflow-x-auto leading-relaxed">{`{
   "intent": "loan_outreach",
   "filters": {
@@ -117,7 +118,7 @@ export function ReasoningPage() {
           </div>
 
           <div className="glass rounded-xl p-5 shadow-card">
-            <div className="text-sm font-semibold mb-3">Confidence Over Steps</div>
+            <div className="text-sm font-semibold mb-3">{t("Confidence Over Steps")}</div>
             <div className="space-y-2">
               {[
                 { name: "Planner", v: 78 }, { name: "Tools", v: 84 },

@@ -9,6 +9,15 @@
 
 ---
 
+## Corporate edition & Vietnamese UI
+
+- **Vietnamese UI** is the default; switch with the `VI / EN` button in the header (reloads the page).
+- **Corporate edition** (`/corp`): 220 simulated Vietnamese corporate/FDI customers, explainable cross-sell scoring
+  (working capital, L/C, UPAS, guarantees, FX, payroll, cash management, deposits), risk alerts (limit expiry, utilisation,
+  inflow decline, debt group), pipeline board, and an RM assistant that understands Vietnamese/English/Chinese queries and drafts
+  Zalo / email / call scripts in Vietnamese, Chinese or English. Backend: `backend/src/corporate`, API under `/api/corp/*`.
+  Tables are created and seeded automatically on first start (existing data is never overwritten).
+
 ## Table of Contents
 1. [What it does](#what-it-does)
 2. [Architecture](#architecture)
@@ -282,7 +291,7 @@ Gemini → Ollama → deterministic template fallback in the sales agent. If the
 
 | Requirement | Version |
 |------------|---------|
-| Python | 3.11+ |
+| Python | 3.11 or 3.12 (3.13 not supported — pinned scikit-learn/numpy do not build) |
 | Node.js | 18+ |
 | Git | any |
 | Ollama (optional) | latest |
@@ -326,7 +335,7 @@ OLLAMA_MODEL=gemma3:4b           # run: ollama pull gemma3:4b
 **Seed and start:**
 
 ```bash
-python3 -m src.database          # creates banking_crm.db with synthetic data
+python3 data/seed_db.py          # creates banking_crm.db with synthetic data
 python3 -m uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
