@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { corp } from "@/lib/corpApi";
+import { corpX } from "@/lib/corpApiExt";
 import { t, getLang } from "@/lib/i18n";
 
 export const COLORS = ["#5b8bff", "#34d399", "#a78bfa", "#fbbf24", "#f472b6", "#22d3ee", "#fb7185"];
@@ -43,6 +44,11 @@ export function FlagBadge({ severity, text }: { severity: string; text: string }
 
 export function useMeta() {
   return useQuery({ queryKey: ["corp", "meta"], queryFn: corp.meta, staleTime: 5 * 60_000 });
+}
+
+/** CBBH có tài khoản đang hoạt động + số KH đang giữ (chỉ Admin; luôn lấy mới để thấy tài khoản vừa tạo). */
+export function useRmOptions(enabled: boolean) {
+  return useQuery({ queryKey: ["admin", "assignment"], queryFn: corpX.assignment, enabled, staleTime: 15_000 });
 }
 
 export function productName(meta: { products: { code: string; vi: string; en: string }[] } | undefined, code: string | null | undefined) {

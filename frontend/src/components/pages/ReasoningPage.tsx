@@ -1,6 +1,5 @@
-import { PageHeader, tooltipStyle } from "./DashboardPage";
-import { PLAYBOOK_STEPS } from "@/lib/agentSim";
-import { Brain, Wrench, Sparkles, MessageSquare, Network, CheckCircle2 } from "lucide-react";
+import { PageHeader } from "./DashboardPage";
+import { Network } from "lucide-react";
 import { t } from "@/lib/i18n";
 
 export function ReasoningPage() {
@@ -28,12 +27,6 @@ export function ReasoningPage() {
       <PageHeader
         title="Reasoning & Tool Trace"
         subtitle={t("Inspect the agent's decision graph, tool calls, state transitions, and confidence over time.")}
-        actions={
-          <div className="text-xs px-3 py-1.5 rounded-lg glass flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" />
-            {t("LangGraph v0.2 · Trace #47281")}
-          </div>
-        }
       />
 
       {/* Graph */}
@@ -65,73 +58,9 @@ export function ReasoningPage() {
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 glass rounded-xl p-5 shadow-card">
-          <div className="text-sm font-semibold mb-4">{t("Execution Timeline")}</div>
-          <div className="space-y-2">
-            {PLAYBOOK_STEPS.map((s, i) => {
-              const Icon = s.type === "plan" ? Brain : s.type === "tool" ? Wrench : s.type === "reflect" ? Sparkles : MessageSquare;
-              return (
-                <div key={s.id} className="flex gap-3 items-start">
-                  <div className="flex flex-col items-center">
-                    <div className="w-7 h-7 rounded-lg bg-muted/60 grid place-items-center" style={{ color: colorFor(s.type) }}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    {i < PLAYBOOK_STEPS.length - 1 && <div className="w-px h-8 bg-border mt-1" />}
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium">{s.label}</span>
-                      <CheckCircle2 className="w-3 h-3 text-success" />
-                      {s.toolCall && <span className="text-[10px] text-muted-foreground font-mono">{s.toolCall.durationMs}ms</span>}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{s.detail}</div>
-                    {s.toolCall && (
-                      <div className="mt-1.5 grid grid-cols-2 gap-2">
-                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-primary">{t("in:")}</span> {JSON.stringify(s.toolCall.input)}</pre>
-                        <pre className="text-[10px] font-mono p-2 rounded bg-muted/40 overflow-x-auto"><span className="text-accent">{t("out:")}</span> {JSON.stringify(s.toolCall.output)}</pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="glass rounded-xl p-5 shadow-card">
-            <div className="text-sm font-semibold mb-3">{t("State Memory")}</div>
-            <pre className="text-[10px] font-mono p-3 rounded bg-muted/40 overflow-x-auto leading-relaxed">{`{
-  "intent": "loan_outreach",
-  "filters": {
-    "city": "Mumbai",
-    "segments": ["HNI","Affluent"]
-  },
-  "audience_count": 14,
-  "suppressed": 4,
-  "selected_product": "Personal Loan",
-  "framework": "AIDA + Cialdini",
-  "confidence": 0.87
-}`}</pre>
-          </div>
-
-          <div className="glass rounded-xl p-5 shadow-card">
-            <div className="text-sm font-semibold mb-3">{t("Confidence Over Steps")}</div>
-            <div className="space-y-2">
-              {[
-                { name: "Planner", v: 78 }, { name: "Tools", v: 84 },
-                { name: "Reflect", v: 91 }, { name: "Synth", v: 87 },
-              ].map((c) => (
-                <div key={c.name}>
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>{c.name}</span><span>{c.v}%</span></div>
-                  <div className="h-1.5 bg-muted rounded mt-0.5"><div className="h-full rounded gradient-primary" style={{ width: `${c.v}%` }} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="glass rounded-xl p-6 shadow-card text-sm text-muted-foreground">
+        {t("Sơ đồ trên là kiến trúc điều phối của trợ lý AI. Nhật ký truy vết từng lượt chạy (công cụ đã gọi, thời gian, độ tin cậy) chỉ xuất hiện khi có lượt chạy thật — hiện chưa có.",
+          "The graph above is the assistant's orchestration architecture. Per-run traces (tools called, timings, confidence) appear only when real runs exist — none yet.")}
       </div>
     </div>
   );

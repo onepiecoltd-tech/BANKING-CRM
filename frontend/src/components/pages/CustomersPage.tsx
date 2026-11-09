@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { customers as customersApi, type ApiCustomer } from "@/lib/api";
-import { formatINR } from "@/lib/mockData";
+import { formatINR } from "@/lib/utils";
 import { PageHeader } from "./DashboardPage";
 import {
   Search, Filter, Download, X, TrendingUp, AlertTriangle,

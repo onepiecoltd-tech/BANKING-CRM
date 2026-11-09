@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "./DashboardPage";
 import { Sparkles, Database, Send, Shield, FileText, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n";
@@ -7,6 +8,12 @@ export function SettingsPage() {
   const [llm, setLlm] = useState("gemini");
   const [crm, setCrm] = useState("sqlite");
   const [sender, setSender] = useState("mock");
+  const { data: audit } = useQuery({
+    queryKey: ["admin", "audit", "recent"],
+    queryFn: () => fetch("/api/admin/audit?limit=12").then((r) => (r.ok ? r.json() : { items: [] })),
+    staleTime: 30_000,
+  });
+  const auditRows: { ts: string; username: string; action: string; detail?: string }[] = audit?.items ?? [];
 
   return (
     <div className="space-y-5">
@@ -66,18 +73,11 @@ export function SettingsPage() {
             <FileText className="w-4 h-4 text-accent" /><div className="text-sm font-semibold">{t("Audit Log")}</div>
           </div>
           <div className="space-y-1.5 text-[11px] font-mono max-h-72 overflow-y-auto pr-1">
-            {[
-              "10:49:12  agent.send_outreach  audience=14  status=ok",
-              "10:48:55  classify_intent  customer=CUST-10024  intent=qualified",
-              "10:42:01  handle_objection  framework=cialdini  conf=0.89",
-              "10:41:32  classify_intent  intent=objection_pricing",
-              "10:32:00  campaign.start  id=mumbai_hni_loan",
-              "09:14:08  llm.switch  from=gemini  to=ollama  by=admin",
-              "08:00:01  cron.score_customers  scored=520  ms=2410",
-            ].map((l, i) => (
+            {auditRows.length === 0 && <div className="px-2 py-1 text-muted-foreground">{t("Chưa có thao tác nào được ghi.", "No activity recorded yet.")}</div>}
+            {auditRows.map((e, i) => (
               <div key={i} className="px-2 py-1 rounded bg-muted/30">
-                <span className="text-muted-foreground">{l.slice(0, 10)}</span>{" "}
-                <span>{l.slice(10)}</span>
+                <span className="text-muted-foreground">{String(e.ts).replace("T", " ").slice(5, 19)}</span>{" "}
+                <span>{e.action}</span> <span className="text-muted-foreground">{e.username}{e.detail ? ` · ${e.detail}` : ""}</span>
               </div>
             ))}
           </div>

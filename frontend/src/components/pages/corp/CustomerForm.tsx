@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { corpX, type CustomerForm } from "@/lib/corpApiExt";
 import { useAuth } from "@/lib/auth";
 import { t } from "@/lib/i18n";
-import { Modal, Btn, ErrBox, inputCls, useMeta, productName } from "./shared";
+import { Modal, Btn, ErrBox, inputCls, useMeta, useRmOptions, productName } from "./shared";
 
 const EMPTY: CustomerForm = {
   name: "", name_zh: "", tax_code: "", ownership: "Nội địa", investor_country: "", industry: "", province: "", industrial_zone: "", employees: 0, annual_revenue_bn: 0,
@@ -26,6 +26,7 @@ function F({ label, children, span = 1 }: { label: string; children: React.React
 export function CustomerFormDialog({ initial, id, onClose, onSaved }: { initial?: Record<string, any>; id?: string; onClose: () => void; onSaved: (id: string) => void }) {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
+  const rmOpts = useRmOptions(isAdmin);
   const { data: meta } = useMeta();
   const [f, setF] = useState<CustomerForm>(() => {
     if (!initial) return { ...EMPTY };
@@ -87,7 +88,7 @@ export function CustomerFormDialog({ initial, id, onClose, onSaved }: { initial?
             {isAdmin && (
               <F label={t("Cán bộ phụ trách", "Relationship manager")}>
                 <input list="dl-rm" className={`${inputCls} w-full`} value={f.rm_name ?? ""} onChange={(e) => set("rm_name", e.target.value)} placeholder={t("(mặc định: bạn)", "(default: you)")} />
-                <datalist id="dl-rm">{(meta?.rm_names ?? []).map((c) => <option key={c} value={c} />)}</datalist>
+                <datalist id="dl-rm">{(rmOpts.data?.accounts ?? []).filter((a) => a.is_active).map((a) => <option key={a.username} value={a.rm_name} />)}</datalist>
               </F>
             )}
           </div>

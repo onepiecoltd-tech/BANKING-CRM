@@ -1,6 +1,9 @@
 """Phạm vi dữ liệu theo vai trò: Admin thấy tất cả; Nhân viên chỉ thấy khách hàng do mình phụ trách (rm_name)."""
 from fastapi import HTTPException
+from src.accounts.models import AppUser
 from .models import CorpCustomer, CorpSetting
+
+NO_RM = "__none__"      # giá trị lọc: khách hàng chưa phân công cho ai
 
 DEFAULTS = {
     "bank_name": "TPBank",
@@ -51,3 +54,13 @@ def get_customer_or_403(db, user, cid) -> CorpCustomer:
     if not is_admin(user) and c.rm_name != user.rm_name:
         raise HTTPException(403, "Khách hàng này không thuộc danh mục bạn phụ trách")
     return c
+
+
+def rm_accounts(db) -> list[dict]:
+    """Mọi tài khoản có thể giữ danh mục khách hàng (CBBH); rm_name là tên khớp với corp_customers.rm_name."""
+    return [{"username": u.username, "full_name": u.full_name, "role": u.role, "rm_name": (u.rm_name or u.full_name),
+             "is_active": bool(u.is_active)} for u in db.query(AppUser).order_by(AppUser.full_name).all()]
+
+
+def active_rm_names(db) -> set[str]:
+    return {a["rm_name"] for a in rm_accounts(db) if a["is_active"]}

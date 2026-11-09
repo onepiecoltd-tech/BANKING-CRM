@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, Trash2, Download } from "lucide-react";
+import { CheckCircle2, XCircle, Trash2, Download, ShieldAlert } from "lucide-react";
 import { corpX, type CorpSettings } from "@/lib/corpApiExt";
 import { useAuth } from "@/lib/auth";
 import { t } from "@/lib/i18n";
@@ -52,7 +52,6 @@ function SettingsInner() {
     mutationFn: () => corpX.saveSettings(f),
     onSuccess: () => { setSaved(true); qc.invalidateQueries({ queryKey: ["corp"] }); },
   });
-  const clear = useMutation({ mutationFn: corpX.clearDemo, onSuccess: () => qc.invalidateQueries({ queryKey: ["corp"] }) });
   const backup = useMutation({ mutationFn: corpX.downloadBackup, onSuccess: () => qc.invalidateQueries({ queryKey: ["corp", "settings"] }) });
 
   if (isLoading || !data) return <Spinner />;
@@ -136,17 +135,80 @@ function SettingsInner() {
           <div className="mt-2"><ErrBox error={backup.error} /></div>
         </Card>
 
-        <Card title={t("Dữ liệu mẫu", "Demo data")}>
-          <p className="text-sm text-muted-foreground">{t(`Hệ thống đang có ${demo} khách hàng mô phỏng (mã CORPxxxx) cùng dòng tiền, cơ hội, hội thoại liên quan. Xóa chúng trước khi dùng dữ liệu thật để số liệu không bị lẫn.`, `There are ${demo} simulated customers (CORPxxxx) with related cash-flow, opportunities and conversations. Remove them before using real data so figures aren't mixed.`)}</p>
-          <div className="mt-3 flex items-center gap-3">
-            <Btn kind="danger" disabled={clear.isPending || demo === 0} onClick={() => { if (window.confirm(t("Xóa toàn bộ khách hàng mô phỏng và dữ liệu liên quan? Không thể hoàn tác.", "Delete all simulated customers and related data? This cannot be undone."))) clear.mutate(); }}>
-              <Trash2 className="w-3.5 h-3.5" /> {t("Xóa dữ liệu mẫu", "Clear demo data")}
-            </Btn>
-            {clear.isSuccess && <span className="text-xs text-success">{t(`Đã xóa ${clear.data.deleted} khách hàng`, `Deleted ${clear.data.deleted}`)}</span>}
-          </div>
-          <div className="mt-2"><ErrBox error={clear.error} /></div>
-        </Card>
+        <CleanupCard />
       </div>
     </div>
+  );
+}
+
+
+const GROUPS = [
+  { key: "retail" as const, vi: "Khách hàng cá nhân mô phỏng", en: "Simulated retail customers",
+    hint: ["Toàn bộ khách hàng cá nhân mẫu cùng giao dịch, tương tác, định danh, đồng ý, danh sách chặn.", "All sample retail customers with their transactions, interactions, identities, consents and suppressions."],
+    rows: [["customers", "Khách hàng", "Customers"], ["transactions", "Giao dịch", "Transactions"], ["interactions", "Tương tác/ghi chú", "Interactions/notes"], ["identity_graph", "Định danh", "Identities"], ["consents", "Đồng ý", "Consents"], ["suppressions", "Danh sách chặn", "Suppressions"]] },
+  { key: "corp_demo" as const, vi: "Khách hàng DN mẫu (CORPxxxx) & ghi chú mô phỏng", en: "Sample corporate customers (CORPxxxx) & simulated notes",
+    hint: ["Khách hàng DN mẫu cùng dòng tiền, cơ hội, ghi chú tương tác, hội thoại, chiến dịch mẫu. KH thật (nhập từ Excel) không bị đụng.", "Sample corporate customers with cash flow, opportunities, interaction notes, conversations and campaigns. Real (imported) customers are untouched."],
+    rows: [["customers", "Khách hàng", "Customers"], ["monthly", "Dòng tiền tháng", "Monthly cash flow"], ["interactions", "Ghi chú tương tác", "Interaction notes"], ["opportunities", "Cơ hội", "Opportunities"], ["messages", "Tin nhắn", "Messages"], ["campaigns", "Chiến dịch", "Campaigns"]] },
+  { key: "junk" as const, vi: "Dữ liệu rác", en: "Junk data",
+    hint: ["Dòng mồ côi (khách hàng đã bị xóa), ghi chú trống, nhật ký chạy AI bị lỗi, chiến dịch rỗng.", "Orphan rows (customer deleted), blank notes, failed AI-run logs, empty campaigns."],
+    rows: [["orphans", "Dòng mồ côi", "Orphan rows"], ["blank_notes", "Ghi chú trống", "Blank notes"], ["failed_ai_runs", "Log AI lỗi", "Failed AI runs"], ["empty_campaigns", "Chiến dịch rỗng", "Empty campaigns"]] },
+];
+
+function CleanupCard() {
+  const qc = useQueryClient();
+  const { data, error, isLoading } = useQuery({ queryKey: ["corp", "cleanup"], queryFn: corpX.cleanupPlan });
+  const [pick, setPick] = useState({ retail: true, corp_demo: true, junk: true });
+  const [word, setWord] = useState("");
+  const run = useMutation({
+    mutationFn: () => corpX.cleanupRun({ ...pick, confirm: word }),
+    onSuccess: () => { setWord(""); qc.invalidateQueries(); },
+  });
+  if (isLoading || !data) return <Card title={t("Dọn dữ liệu mô phỏng & rác", "Clean simulated & junk data")}><Spinner /></Card>;
+  const total = GROUPS.reduce((n, g) => n + (pick[g.key] ? data[g.key].total : 0), 0);
+  const any = pick.retail || pick.corp_demo || pick.junk;
+  return (
+    <Card title={t("Dọn dữ liệu mô phỏng & rác", "Clean simulated & junk data")} className="md:col-span-2">
+      <p className="text-sm text-muted-foreground">
+        {t("Chọn nhóm cần xóa. Hệ thống tự sao lưu CSDL trước khi xóa và sẽ không nạp lại dữ liệu mẫu ở lần khởi động sau.", "Pick what to delete. The database is backed up automatically first, and sample data will not be re-seeded on next start.")}
+      </p>
+      <div className="mt-3 grid md:grid-cols-3 gap-3">
+        {GROUPS.map((g) => {
+          const grp = data[g.key];
+          const on = pick[g.key];
+          return (
+            <label key={g.key} className={`rounded-lg border p-3 cursor-pointer transition ${on ? "border-primary/50 bg-primary/5" : "border-border bg-muted/20"}`}>
+              <div className="flex items-start gap-2">
+                <input type="checkbox" className="mt-1" checked={on} onChange={(e) => setPick((p) => ({ ...p, [g.key]: e.target.checked }))} />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{t(g.vi, g.en)}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{t(g.hint[0], g.hint[1])}</div>
+                </div>
+              </div>
+              <ul className="mt-2 text-[11px] space-y-0.5">
+                {g.rows.map(([k, vi, en]) => (
+                  <li key={k} className="flex justify-between"><span className="text-muted-foreground">{t(vi, en)}</span><span className="tabular-nums">{(grp[k] ?? 0).toLocaleString()}</span></li>
+                ))}
+              </ul>
+              <div className={`mt-2 text-xs font-semibold ${grp.total ? "text-warning" : "text-success"}`}>
+                {grp.total ? t(`${grp.total.toLocaleString()} dòng sẽ bị xóa`, `${grp.total.toLocaleString()} rows will be deleted`) : t("Đã sạch", "Already clean")}
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex items-center gap-1.5 text-xs text-success">
+        <CheckCircle2 className="w-3.5 h-3.5" />
+        {t(`Giữ nguyên ${data.real_corp_customers.toLocaleString()} khách hàng doanh nghiệp thật, tài khoản và nhật ký thao tác.`, `Keeps ${data.real_corp_customers.toLocaleString()} real corporate customers, accounts and the audit log.`)}
+      </div>
+      {!data.backup_ok && <div className="mt-2 text-xs text-destructive flex items-center gap-1.5"><ShieldAlert className="w-3.5 h-3.5" />{t("Chỉ hỗ trợ dọn khi dùng SQLite (cần sao lưu trước khi xóa).", "Cleanup requires SQLite (a backup is taken first).")}</div>}
+      <div className="mt-3 flex items-center gap-3 flex-wrap">
+        <input className={`${inputCls} w-44`} value={word} onChange={(e) => setWord(e.target.value)} placeholder={t("Gõ XOA để xác nhận", "Type XOA to confirm")} />
+        <Btn kind="danger" disabled={run.isPending || !any || total === 0 || word.trim().toUpperCase() !== "XOA" || !data.backup_ok} onClick={() => run.mutate()}>
+          <Trash2 className="w-3.5 h-3.5" /> {run.isPending ? t("Đang dọn…", "Cleaning…") : t(`Sao lưu rồi xóa ${total.toLocaleString()} dòng`, `Back up, then delete ${total.toLocaleString()} rows`)}
+        </Btn>
+        {run.isSuccess && <span className="text-xs text-success">{t(`Đã xóa ${run.data.deleted_total.toLocaleString()} dòng. Bản sao lưu: ${run.data.backup}`, `Deleted ${run.data.deleted_total.toLocaleString()} rows. Backup: ${run.data.backup}`)}</span>}
+      </div>
+      <div className="mt-2"><ErrBox error={error || run.error} /></div>
+    </Card>
   );
 }

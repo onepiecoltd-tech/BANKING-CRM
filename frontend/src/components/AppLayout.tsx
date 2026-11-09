@@ -21,6 +21,7 @@ import {
   FileUp,
   ShieldCheck,
   UserCog,
+  UserCheck,
   LogOut,
   KeyRound,
   ChevronDown,
@@ -64,7 +65,10 @@ function corpNav(): NavItem[] {
 }
 
 function adminNav(): NavItem[] {
-  return [{ to: "/admin/users", label: t("Người dùng & phân quyền", "Users & roles"), icon: UserCog, adminOnly: true }];
+  return [
+    { to: "/admin/users", label: t("Người dùng & phân quyền", "Users & roles"), icon: UserCog, adminOnly: true },
+    { to: "/admin/assign", label: t("Phân công KH ↔ CBBH", "Assign customers ↔ RMs"), icon: UserCheck, adminOnly: true },
+  ];
 }
 
 export function AppLayout() {

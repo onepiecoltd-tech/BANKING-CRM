@@ -1,0 +1,167 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  CRM Khách hàng Doanh nghiệp — MỘT file duy nhất cho giao diện + backend + CSDL
+# ═══════════════════════════════════════════════════════════════════════════
+#  Đặt file này ở thư mục gốc dự án (cùng cấp với thư mục backend/ và frontend/).
+#
+#  CHẠY (trên VPS đã cài Docker, Compose >= 2.23):
+#     cd /opt/crm
+#     nano .env                      ← dán khóa Gemini MỚI vào dòng GEMINI_API_KEY= rồi lưu
+#     docker compose up -d --build   ← lần đầu 5–10 phút
+#     docker compose ps              ← thấy api (healthy) và web (running) là xong
+#     Mở:  http://IP_VPS:1111
+#
+#  Mã thiết lập (CRM_SETUP_CODE) đặt ngay trong file này; khóa Gemini nằm trong file .env cạnh file này
+#  (container api đọc trực tiếp từ .env). Tạo tài khoản Admin ngay sau khi chạy lần đầu.
+#
+#  CỔNG: chỉ MỘT cổng ra ngoài là 1111 (giao diện). Không dùng 80/443 hay bất kỳ cổng mặc định nào.
+#        Backend không mở cổng nào ra máy chủ; giao diện gọi API qua mạng nội bộ Docker (crm-net).
+#
+#  Gồm 2 container + 1 volume dữ liệu:
+#     web  = Caddy (cổng 1111): phục vụ giao diện, chuyển /api/* sang backend qua crm-net
+#     api  = backend FastAPI (OCR Tesseract: Việt/Anh/Trung), chỉ nằm trong crm-net
+#     CSDL = SQLite, nằm trong volume "crm_data" (/data/banking_crm.db),
+#            sao lưu tự động hằng ngày vào /data/backups. Dữ liệu KHÔNG mất khi cập nhật.
+#
+#  LƯU Ý: cổng 1111 là HTTP thường (chưa mã hoá). Xem DEPLOY.md mục "HTTPS và giới hạn truy cập".
+# ═══════════════════════════════════════════════════════════════════════════
+name: crm
+
+services:
+  # ── BACKEND + CSDL ───────────────────────────────────────────────────────
+  api:
+    image: crm-api:local
+    container_name: crm-api
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        # Tesseract để OCR PDF scan/ảnh (Việt, Anh, Trung giản thể)
+        RUN apt-get update \
+         && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-vie tesseract-ocr-eng tesseract-ocr-chi-sim curl \
+         && rm -rf /var/lib/apt/lists/*
+        WORKDIR /app
+        COPY backend/requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+        COPY backend/ .
+    env_file:
+      - .env                                   # GEMINI_API_KEY (và LLM_BACKEND nếu muốn đổi) lấy từ file .env
+    environment:
+      CRM_ENV: production                      # ẩn trang /docs
+      DATABASE_URL: sqlite:////data/banking_crm.db
+      CRM_BACKUP_DIR: /data/backups
+      CRM_BACKUP_KEEP_DAYS: "14"
+      CRM_SEED_DEMO: "0"                       # 0 = không nạp khách hàng mô phỏng; đổi thành "1" nếu muốn xem thử
+      # Mã thiết lập: ai mở trang lần đầu cũng phải nhập mã này mới tạo được tài khoản Admin.
+      # Sau khi có Admin, mã này không còn tác dụng.
+      CRM_SETUP_CODE: ${CRM_SETUP_CODE:-23121995}
+      SENDER_BACKEND: mock                     # mock = chỉ mô phỏng, KHÔNG gửi tin thật
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - data:/data                             # CSDL + sao lưu
+    networks: [crm-net]
+    expose:
+      - "8000"                                 # chỉ trong mạng nội bộ Docker (crm-net), KHÔNG publish ra máy chủ
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    # Chặn chạy khi quên đổi mã thiết lập mặc định (xem log: docker compose logs api)
+    command:
+      - sh
+      - -c
+      - |
+        case "$$CRM_SETUP_CODE" in
+          ""|DOI-MA-NAY*) echo "LOI: chua dat CRM_SETUP_CODE. Sua dong '<<< SUA' trong docker-compose.yml roi chay lai." >&2; exit 1 ;;
+        esac
+        # --proxy-headers: lấy IP thật của người dùng từ Caddy (cổng 8000 không mở ra ngoài)
+        exec uvicorn src.api:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips "*"
+
+  # ── GIAO DIỆN + HTTPS ────────────────────────────────────────────────────
+  web:
+    image: crm-web:local
+    container_name: crm-web
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:22-slim AS build
+        WORKDIR /src
+        COPY frontend/package.json frontend/package-lock.json ./
+        RUN npm ci
+        COPY frontend/ .
+        RUN STATIC_SPA=1 npm run build
+
+        FROM caddy:2-alpine
+        COPY --from=build /src/dist/client /srv
+        # _shell.html là trang khởi động của SPA; thêm index.html để đường dẫn gốc "/" luôn hoạt động
+        RUN cp /srv/_shell.html /srv/index.html
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [crm-net]
+    ports:
+      - "1111:1111"                            # CỔNG DUY NHẤT mở ra ngoài (giao diện + /api qua proxy)
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+
+configs:
+  caddyfile:
+    content: |
+      {
+        # Chỉ HTTP trên cổng 1111: không mở 80/443, không xin chứng chỉ, không mở cổng quản trị 2019
+        auto_https off
+        admin off
+      }
+
+      :1111 {
+        encode zstd gzip
+
+        header {
+          X-Content-Type-Options "nosniff"
+          X-Frame-Options "DENY"
+          Referrer-Policy "strict-origin-when-cross-origin"
+          -Server
+        }
+
+        # API: chỉ /api/* được chuyển vào backend qua mạng Docker (Swagger /docs không lộ ra ngoài)
+        handle /api/* {
+          request_body {
+            max_size 60MB
+          }
+          reverse_proxy api:8000 {
+            transport http {
+              response_header_timeout 300s
+            }
+          }
+        }
+
+        # Giao diện tĩnh; mọi đường dẫn khác trả về _shell.html để router phía trình duyệt xử lý
+        handle {
+          root * /srv
+          @immutable path /assets/*
+          header @immutable Cache-Control "public, max-age=31536000, immutable"
+          @fresh not path /assets/*
+          header @fresh Cache-Control "no-cache"
+          try_files {path} /_shell.html
+          file_server
+        }
+      }
+
+volumes:
+  data:
+    name: crm_data            # CSDL SQLite + sao lưu tự động
+  caddy_data:
+    name: crm_caddy_data
+  caddy_config:
+    name: crm_caddy_config
+
+networks:
+  crm-net:
+    name: crm-net             # mạng nội bộ Docker: web gọi api qua đây

@@ -110,6 +110,10 @@ def main():
         d = c.get(f"/api/corp/customers/{nid}", headers=H(stf)).json()
         check("NV không đổi được rm_name; segment tự cập nhật", r.status_code == 200 and d["customer"]["rm_name"] == "Trần Thu Hà" and d["customer"]["segment"] == "SME")
         r = c.post("/api/corp/customers/reassign", headers=H(adm), json={"customer_ids": [nid], "to_rm": "Lê Minh Quân"})
+        check("chuyển cho tên chưa có tài khoản bị chặn", r.status_code == 400, r.text)
+        r = c.post("/api/admin/users", headers=H(adm), json={"username": "nv.quan", "full_name": "Lê Minh Quân", "role": "staff", "password": "Nhanvien123"})
+        quan_id = r.json()["id"]
+        r = c.post("/api/corp/customers/reassign", headers=H(adm), json={"customer_ids": [nid], "to_rm": "Lê Minh Quân"})
         check("admin chuyển danh mục", r.status_code == 200 and r.json()["moved"] == 1)
         check("NV mất quyền sau khi chuyển", c.get(f"/api/corp/customers/{nid}", headers=H(stf)).status_code == 403)
         c.post("/api/corp/customers/reassign", headers=H(adm), json={"customer_ids": [nid], "to_rm": "Trần Thu Hà"})
@@ -287,12 +291,119 @@ def main():
         a2 = c.get("/api/corp/analytics", headers=H(stf)).json()
         check("analytics NV không có rm_performance + chỉ KH của mình", "rm_performance" not in a2 and a2["kpis"]["customers"] == ks["total"] + 2 + 1 - 0 or a2["kpis"]["customers"] > 0)
 
+        # ── phân công KH ↔ CBBH ──
+        A = "/api/corp/admin/assignment"; G = "/api/corp/admin/assign"
+        check("NV không xem phân công", c.get(A, headers=H(stf)).status_code == 403)
+        check("chưa đăng nhập không xem phân công", c.get(A).status_code == 401)
+        check("NV không gán được", c.post(G, headers=H(stf), json={"to_rm": "Trần Thu Hà", "customer_ids": [ids[0]]}).status_code == 403)
+        asg = c.get(A, headers=H(adm)).json()
+        accs = {a["rm_name"]: a for a in asg["accounts"]}
+        orph = {u["rm_name"]: u for u in asg["unmatched"]}
+        check("tổng quan: tài khoản + số KH từng người", accs["Trần Thu Hà"]["total"] > 0 and accs["Lê Minh Quân"]["is_active"] and asg["total"] >= 200, asg["total"])
+        check("nhận ra KH gán cho tên chưa có tài khoản", "Phạm Ngọc Anh" in orph and orph["Phạm Ngọc Anh"]["total"] > 0, list(orph))
+        check("các nhóm cộng lại đúng tổng", sum(a["total"] for a in asg["accounts"]) + asg["unassigned"]["total"] + asg["unmatched_total"] == asg["total"])
+        check("meta: admin có danh sách CBBH, NV thì không", {x["rm_name"] for x in c.get("/api/corp/meta", headers=H(adm)).json()["rm_options"]} >= {"Trần Thu Hà", "Lê Minh Quân"}
+              and c.get("/api/corp/meta", headers=H(stf)).json()["rm_options"] == [])
+        n_orph = orph["Phạm Ngọc Anh"]["total"]
+        staff_before = c.get("/api/corp/kpis", headers=H(stf)).json()["total"]
+        r = c.post(G, headers=H(adm), json={"to_rm": "Trần Thu Hà", "filters": {"rm": "Phạm Ngọc Anh"}, "dry_run": True})
+        check("xem trước: số KH + người đang giữ", r.status_code == 200 and r.json()["matched"] == n_orph == r.json()["moved"] and r.json()["from"][0]["rm_name"] == "Phạm Ngọc Anh" and r.json()["dry_run"], r.text)
+        check("xem trước không đổi dữ liệu", c.get("/api/corp/kpis", headers=H(stf)).json()["total"] == staff_before)
+        check("gán không điều kiện bị chặn", c.post(G, headers=H(adm), json={"to_rm": "Trần Thu Hà", "filters": {}}).status_code == 400)
+        check("gán cho tên không có tài khoản bị chặn", c.post(G, headers=H(adm), json={"to_rm": "Phạm Ngọc Anh", "filters": {"rm": "Lê Minh Quân"}}).status_code == 400)
+        check("chuyển danh mục chặn tên lạ", c.post("/api/corp/customers/reassign", headers=H(adm), json={"from_rm": "Lê Minh Quân", "to_rm": "Tên Lạ"}).status_code == 400)
+        c.patch(f"/api/admin/users/{quan_id}", headers=H(adm), json={"is_active": False})
+        check("không gán cho tài khoản đã khóa", c.post(G, headers=H(adm), json={"to_rm": "Lê Minh Quân", "filters": {"rm": "Phạm Ngọc Anh"}}).status_code == 400)
+        c.patch(f"/api/admin/users/{quan_id}", headers=H(adm), json={"is_active": True})
+        quan_before = accs["Lê Minh Quân"]["total"]
+        r = c.post(G, headers=H(adm), json={"to_rm": "Lê Minh Quân", "filters": {"rm": "Phạm Ngọc Anh"}})
+        check("gán theo bộ lọc", r.status_code == 200 and r.json()["moved"] == n_orph and r.json()["already"] == 0, r.text)
+        asg2 = c.get(A, headers=H(adm)).json()
+        accs2 = {a["rm_name"]: a for a in asg2["accounts"]}
+        check("CBBH nhận tăng đúng số, tên lạ biến mất", accs2["Lê Minh Quân"]["total"] == quan_before + n_orph and "Phạm Ngọc Anh" not in {u["rm_name"] for u in asg2["unmatched"]})
+        check("gán lại cùng điều kiện: không còn gì để chuyển", c.post(G, headers=H(adm), json={"to_rm": "Lê Minh Quân", "filters": {"rm": "Phạm Ngọc Anh"}}).json()["moved"] == 0)
+        pick = [x["customer_id"] for x in c.get("/api/corp/customers", params={"rm": "Nguyễn Hoàng Nam", "limit": 3}, headers=H(adm)).json()["items"]]
+        r = c.post(G, headers=H(adm), json={"to_rm": "Trần Thu Hà", "customer_ids": pick})
+        check("gán theo danh sách mã", r.status_code == 200 and r.json()["moved"] == 3 and r.json()["from"][0]["rm_name"] == "Nguyễn Hoàng Nam", r.text)
+        r = c.post(G, headers=H(adm), json={"to_rm": "Trần Thu Hà", "customer_ids": pick})
+        check("gán lần 2: đã thuộc người đó", r.json()["moved"] == 0 and r.json()["already"] == 3)
+        check("NV thấy ngay KH vừa được gán", c.get(f"/api/corp/customers/{pick[0]}", headers=H(stf)).status_code == 200)
+        # khách chưa phân công (rm_name rỗng)
+        pick2 = [x["customer_id"] for x in c.get("/api/corp/customers", params={"rm": "Nguyễn Hoàng Nam", "limit": 2}, headers=H(adm)).json()["items"]]
+        import sqlite3 as _sq  # noqa: E401
+        _con = _sq.connect(f"{_tmp}/t.db"); _con.executemany("update corp_customers set rm_name = NULL where customer_id = ?", [(i,) for i in pick2]); _con.commit(); _con.close()
+        lst0 = c.get("/api/corp/customers", params={"rm": "__none__", "limit": 50}, headers=H(adm)).json()
+        check("lọc 'chưa phân công'", lst0["total"] == 2 and all(not x["rm_name"] for x in lst0["items"]), lst0["total"])
+        check("tổng quan đếm KH chưa phân công", c.get(A, headers=H(adm)).json()["unassigned"]["total"] == 2)
+        r = c.post(G, headers=H(adm), json={"to_rm": "Lê Minh Quân", "filters": {"rm": "__none__"}})
+        check("gán KH chưa phân công", r.status_code == 200 and r.json()["moved"] == 2 and r.json()["from"][0]["rm_name"] == "", r.text)
+        check("hết KH chưa phân công", c.get(A, headers=H(adm)).json()["unassigned"]["total"] == 0)
+
+        # ── dọn dữ liệu mô phỏng & rác ──
+        CL = "/api/corp/admin/cleanup"
+        check("chưa đăng nhập không xem được kế hoạch dọn", c.get(CL).status_code == 401)
+        check("NV không xem được kế hoạch dọn", c.get(CL, headers=H(stf)).status_code == 403)
+        check("NV không chạy được dọn", c.post(CL, headers=H(stf), json={"retail": True, "confirm": "XOA"}).status_code == 403)
+        pl = c.get(CL, headers=H(adm)).json()
+        real0 = pl["real_corp_customers"]
+        check("kế hoạch dọn đếm KH cá nhân mô phỏng", pl["retail"]["customers"] >= 500 and pl["retail"]["transactions"] > 1000 and pl["retail"]["total"] > 5000, pl["retail"])
+        check("kế hoạch dọn đếm KH DN mẫu", pl["corp_demo"]["customers"] >= 200 and pl["corp_demo"]["monthly"] > 1000 and pl["corp_demo"]["campaigns"] >= 1, pl["corp_demo"])
+        check("kế hoạch dọn đếm KH thật (không bị xóa)", real0 >= 3, real0)
+        check("kế hoạch dọn không xóa gì", c.get(CL, headers=H(adm)).json()["retail"]["customers"] == pl["retail"]["customers"])
+        check("thiếu xác nhận bị chặn", c.post(CL, headers=H(adm), json={"retail": True}).status_code == 400)
+        check("sai từ xác nhận bị chặn", c.post(CL, headers=H(adm), json={"retail": True, "confirm": "ok"}).status_code == 400)
+        check("không chọn nhóm nào bị chặn", c.post(CL, headers=H(adm), json={"confirm": "XOA"}).status_code == 400)
+        # gieo rác: dòng mồ côi, ghi chú trống, log AI lỗi
+        import sqlite3 as _sq, glob as _gl  # noqa: E401
+        _db = _sq.connect(f"{_tmp}/t.db", timeout=20)
+        _real = _db.execute("select customer_id from corp_customers where customer_id not like 'CORP%' limit 1").fetchone()[0]
+        _db.execute("insert into corp_interactions(customer_id,date,channel,summary,outcome) values ('GHOST01','2026-01-01','call','ghi chú mồ côi','x')")
+        _db.execute("insert into corp_interactions(customer_id,date,channel,summary,outcome) values (?, '2026-01-01','call','','')", (_real,))
+        _db.execute("insert into corp_agent_runs(username,query,filters,steps,total_matched,llm_used,llm_error,created_at) values ('quanly','q','{}','[]',0,0,'RuntimeError: Gemini 404','2026-01-01')")
+        _db.execute("insert into corp_agent_runs(username,query,filters,steps,total_matched,llm_used,llm_error,created_at) values ('quanly','q ok','{}','[]',1,1,NULL,'2026-01-01')")
+        _db.commit(); _db.close()
+        pj = c.get(CL, headers=H(adm)).json()["junk"]
+        check("kế hoạch dọn thấy rác", pj["orphans"] >= 1 and pj["blank_notes"] >= 1 and pj["failed_ai_runs"] >= 1, pj)
+        r = c.post(CL, headers=H(adm), json={"retail": True, "junk": True, "confirm": "xoa"})
+        j = r.json()
+        check("dọn KH cá nhân + rác", r.status_code == 200 and j["retail"]["customers"] >= 500 and j["retail"]["transactions"] > 1000 and j["junk"]["failed_ai_runs"] >= 1 and j["junk"]["orphans"] >= 1 and j["junk"]["blank_notes"] >= 1, r.text[:400])
+        check("dọn tự sao lưu trước khi xóa", j["backup"].startswith("banking_crm-") and bool(_gl.glob(f"{_tmp}/bk/{j['backup']}")), j.get("backup"))
+        _b = _sq.connect(f"{_tmp}/bk/{j['backup']}")
+        check("bản sao lưu còn đủ KH cá nhân để khôi phục", _b.execute("select count(*) from customers").fetchone()[0] >= 500 and _b.execute("select count(*) from corp_agent_runs").fetchone()[0] >= 2)
+        _b.close()
+        check("sau dọn: kế hoạch KH cá nhân = 0", j["plan"]["retail"]["total"] == 0 and j["plan"]["junk"]["total"] == 0, j["plan"])
+        check("sau dọn: KH DN thật còn nguyên", j["plan"]["real_corp_customers"] == real0)
+        check("sau dọn: KH DN mẫu chưa bị đụng", j["plan"]["corp_demo"]["customers"] >= 200)
+        check("sau dọn: log AI chạy tốt được giữ", _sq.connect(f"{_tmp}/t.db").execute("select count(*) from corp_agent_runs where llm_error is null").fetchone()[0] >= 1)
+        # các API cá nhân phải chạy được khi CSDL trống
+        empty_ok = True; bad_ep = []
+        for ep in ("/api/customers", "/api/analytics/kpis", "/api/analytics/charts", "/api/analytics/campaigns", "/api/digest/morning",
+                   "/api/analytics/churn-signals", "/api/analytics/cross-sell", "/api/analytics/reply-rates", "/api/outreach/pipeline",
+                   "/api/outreach/campaigns", "/api/followups/due", "/api/audit-log"):
+            rr = c.get(ep, headers=H(adm))
+            if rr.status_code != 200:
+                empty_ok = False; bad_ep.append((ep, rr.status_code))
+        check("API khách hàng cá nhân chạy được khi trống", empty_ok, bad_ep)
+        check("danh sách KH cá nhân rỗng", c.get("/api/customers", headers=H(adm)).json()["total"] == 0)
+        kp = c.get("/api/analytics/kpis", headers=H(adm)).json()
+        check("KPI cá nhân về 0", kp.get("totalCustomers") == 0, kp)
+        r = c.post(CL, headers=H(adm), json={"corp_demo": True, "confirm": "XOA"})
+        j = r.json()
+        check("dọn KH DN mẫu", r.status_code == 200 and j["corp_demo"]["customers"] >= 200 and j["corp_demo"]["monthly"] > 1000 and j["corp_demo"]["messages"] >= 1 and j["corp_demo"]["campaigns"] >= 1, r.text[:400])
+        check("sau dọn: không còn KH/chiến dịch mẫu", j["plan"]["corp_demo"]["total"] == 0 and j["plan"]["real_corp_customers"] == real0, j["plan"])
+        left = c.get("/api/corp/customers?limit=500", headers=H(adm)).json()
+        check("chỉ còn KH DN thật sau dọn", left["total"] == real0 and all(not x["customer_id"].startswith("CORP") for x in left["items"]), left["total"])
+        check("NV vẫn xem được KH của mình sau dọn", c.get("/api/corp/customers", headers=H(stf)).status_code == 200)
+        check("cờ không nạp lại dữ liệu mẫu", _sq.connect(f"{_tmp}/t.db").execute("select count(*) from corp_settings where key='_demo_cleared'").fetchone()[0] == 1)
+        r = c.post(CL, headers=H(adm), json={"retail": True, "corp_demo": True, "junk": True, "confirm": "XOA"})
+        check("dọn lần 2 vô hại (đã sạch)", r.status_code == 200 and r.json()["deleted_total"] == 0, r.text[:900])
+
         # ── audit + demo clear ──
         au = c.get("/api/admin/audit?limit=500", headers=H(adm)).json()["items"]
         acts = {e["action"] for e in au}
-        check("nhật ký ghi đủ hành động", {"login", "login.failed", "customer.create", "import.approve", "campaign.create", "settings.update"} <= acts, acts)
+        check("nhật ký ghi đủ hành động", {"login", "login.failed", "customer.create", "import.approve", "campaign.create", "settings.update", "customer.assign", "data.cleanup"} <= acts, acts)
         r = c.post("/api/corp/admin/clear-demo", headers=H(adm))
-        check("xóa dữ liệu mẫu", r.status_code == 200 and r.json()["deleted"] >= 200, r.text)
+        check("xóa dữ liệu mẫu (API cũ, idempotent sau khi đã dọn)", r.status_code == 200 and r.json()["deleted"] == 0, r.text)
         left = c.get("/api/corp/customers?limit=500", headers=H(adm)).json()
         check("chỉ còn KH thật", left["total"] >= 3 and all(not x["customer_id"].startswith("CORP") for x in left["items"]), left["total"])
         check("sau xóa vẫn tải analytics/kpis", c.get("/api/corp/analytics", headers=H(adm)).status_code == 200 and c.get("/api/corp/kpis", headers=H(adm)).status_code == 200)
@@ -302,7 +413,7 @@ def main():
             if glob.glob(f"{_tmp}/bk/banking_crm-*.db"):
                 break
             time.sleep(0.5)
-        check("sao lưu tự động chạy khi khởi động", len(glob.glob(f"{_tmp}/bk/banking_crm-*.db")) == 1)
+        check("sao lưu tự động chạy khi khởi động", len(glob.glob(f"{_tmp}/bk/banking_crm-*.db")) >= 1)
         sysinfo = c.get("/api/corp/settings", headers=H(adm)).json()["system"]
         check("cài đặt báo bản sao lưu gần nhất", sysinfo["backup_auto"] is True and sysinfo["backup"]["count"] >= 1 and sysinfo["backup"]["bytes"] > 10000, sysinfo)
         check("NV không tải được sao lưu", c.get("/api/corp/admin/backup", headers=H(stf)).status_code == 403)

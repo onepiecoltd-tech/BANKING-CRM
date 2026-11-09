@@ -85,10 +85,10 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     const fetches = [
-      fetch("http://localhost:8000/api/analytics/reply-rates").then(r => r.json()).then(setReplyRates).catch(() => {}),
-      fetch("http://localhost:8000/api/analytics/churn-signals").then(r => r.json()).then(setChurnData).catch(() => {}),
-      fetch("http://localhost:8000/api/analytics/cross-sell").then(r => r.json()).then(setCrossSell).catch(() => {}),
-      fetch("http://localhost:8000/api/outreach/pipeline").then(r => r.json()).then(setPipelineData).catch(() => {}),
+      fetch("/api/analytics/reply-rates").then(r => r.json()).then(setReplyRates).catch(() => {}),
+      fetch("/api/analytics/churn-signals").then(r => r.json()).then(setChurnData).catch(() => {}),
+      fetch("/api/analytics/cross-sell").then(r => r.json()).then(setCrossSell).catch(() => {}),
+      fetch("/api/outreach/pipeline").then(r => r.json()).then(setPipelineData).catch(() => {}),
     ];
     Promise.allSettled(fetches).finally(() => setLoading(false));
   }, []);

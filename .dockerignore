@@ -4,6 +4,7 @@
 **/*.pyc
 backend/.venv
 backend/.env
+.env
 backend/*.db
 backend/whatsapp-service
 frontend/dist

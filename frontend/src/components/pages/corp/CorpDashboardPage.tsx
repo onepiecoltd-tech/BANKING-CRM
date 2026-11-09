@@ -48,7 +48,7 @@ export function CorpDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title={t("Tổng quan Khách hàng Doanh nghiệp", "Corporate Customer Overview")}
-        subtitle={t("Danh mục khách hàng doanh nghiệp, cơ hội bán chéo và cảnh báo cần xử lý hôm nay. (Dữ liệu mô phỏng)", "Corporate portfolio, cross-sell opportunities and alerts to handle today. (Simulated data)")}
+        subtitle={t("Danh mục khách hàng doanh nghiệp, cơ hội bán chéo và cảnh báo cần xử lý hôm nay.", "Corporate portfolio, cross-sell opportunities and alerts to handle today.")}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

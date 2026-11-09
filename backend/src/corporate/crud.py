@@ -12,7 +12,8 @@ from src.accounts.service import audit
 from .models import (CorpCustomer, CorpMonthly, CorpInteraction, CorpOpportunity, CorpMessage, CorpCampaignTarget,
                      CorpOptOut, customer_dict)
 from .catalog import PRODUCTS, TITLES, LIFECYCLES
-from .access import get_customer_or_403, is_admin
+from sqlalchemy import or_
+from .access import get_customer_or_403, is_admin, active_rm_names, NO_RM
 
 router = APIRouter(prefix="/api/corp", tags=["corporate-crud"])
 
@@ -182,15 +183,24 @@ class ReassignIn(BaseModel):
 
 @router.post("/customers/reassign")
 def reassign(body: ReassignIn, request: Request, admin=Depends(require_admin)):
+    """Chuyển KH sang CBBH khác (theo danh sách mã hoặc toàn bộ danh mục của cán bộ nguồn). Cán bộ nhận phải có tài khoản."""
     if not body.customer_ids and not body.from_rm:
         raise HTTPException(400, "Chọn danh sách khách hàng hoặc cán bộ nguồn")
+    to = (body.to_rm or "").strip()
     db = SessionLocal()
     try:
+        if to not in active_rm_names(db):
+            raise HTTPException(400, "Cán bộ nhận phải có tài khoản đang hoạt động (tạo ở Quản trị → Người dùng)")
         q = db.query(CorpCustomer)
-        q = q.filter(CorpCustomer.customer_id.in_(body.customer_ids)) if body.customer_ids else q.filter(CorpCustomer.rm_name == body.from_rm)
-        n = q.update({CorpCustomer.rm_name: body.to_rm}, synchronize_session=False)
+        if body.customer_ids:
+            q = q.filter(CorpCustomer.customer_id.in_(body.customer_ids))
+        elif body.from_rm == NO_RM:
+            q = q.filter(or_(CorpCustomer.rm_name.is_(None), CorpCustomer.rm_name == ""))
+        else:
+            q = q.filter(CorpCustomer.rm_name == body.from_rm)
+        n = q.update({CorpCustomer.rm_name: to}, synchronize_session=False)
         db.commit()
-        audit(admin, "customer.reassign", "customer", None, f"{n} KH → {body.to_rm}", client_ip(request))
+        audit(admin, "customer.reassign", "customer", None, f"{n} KH → {to}", client_ip(request))
         return {"moved": n}
     finally:
         db.close()

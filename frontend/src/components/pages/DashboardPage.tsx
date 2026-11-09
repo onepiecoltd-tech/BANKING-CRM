@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { analytics as analyticsApi, customers as customersApi, type KPIs, type ChartData } from "@/lib/api";
-import { kpis as mockKpis, customers as mockCustomers, segmentBreakdown as mockSegments, pipelineStages as mockPipeline, conversionTrend as mockTrend, formatINR } from "@/lib/mockData";
+import { formatINR } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
   Users, TrendingUp, Flame, Wallet, Send, Activity,
@@ -35,47 +35,36 @@ export function DashboardPage() {
 
   const { data: digestData } = useQuery({
     queryKey: ["morning-digest"],
-    queryFn: () => fetch("http://localhost:8000/api/digest/morning").then(r => r.json()),
+    queryFn: () => fetch("/api/digest/morning").then(r => r.json()),
     staleTime: 300_000,
   });
 
   const { data: churnAlerts } = useQuery({
     queryKey: ["churn-alerts"],
-    queryFn: () => fetch("http://localhost:8000/api/analytics/churn-signals?limit=5").then(r => r.json()),
+    queryFn: () => fetch("/api/analytics/churn-signals?limit=5").then(r => r.json()),
     staleTime: 300_000,
   });
 
   const { data: crossSellData } = useQuery({
     queryKey: ["cross-sell-dashboard"],
-    queryFn: () => fetch("http://localhost:8000/api/analytics/cross-sell?limit=4").then(r => r.json()),
+    queryFn: () => fetch("/api/analytics/cross-sell?limit=4").then(r => r.json()),
     staleTime: 300_000,
   });
 
-  const kpis = kpiData ?? mockKpis;
-  const segmentBreakdown = chartData?.segmentBreakdown ?? mockSegments;
-  const conversionTrend = chartData?.conversionTrend?.length ? chartData.conversionTrend : mockTrend;
-  const pipelineStages = chartData?.pipelineStages?.length ? chartData.pipelineStages : mockPipeline;
+  const kpis = kpiData ?? { totalCustomers: 0, highValue: 0, hotLeads: 0, pipelineValue: 0 };
+  const segmentBreakdown = chartData?.segmentBreakdown ?? [];
+  const conversionTrend = chartData?.conversionTrend ?? [];
+  const pipelineStages = chartData?.pipelineStages ?? [];
+  const empty = kpis.totalCustomers === 0;
 
   const cards = [
-    { label: t("Total Customers"), value: kpis.totalCustomers.toLocaleString(), delta: "+4.2%", icon: Users, accent: "primary" },
-    { label: t("High-Value Customers"), value: kpis.highValue.toLocaleString(), delta: "+8.1%", icon: TrendingUp, accent: "accent" },
-    { label: t("Hot Leads (AI Scored)"), value: kpis.hotLeads.toLocaleString(), delta: "+22 today", icon: Flame, accent: "warning" },
-    { label: t("Pipeline Value"), value: formatINR(kpis.pipelineValue), delta: "+12.4%", icon: Wallet, accent: "primary" },
+    { label: t("Total Customers"), value: kpis.totalCustomers.toLocaleString(), icon: Users, accent: "primary" },
+    { label: t("High-Value Customers"), value: kpis.highValue.toLocaleString(), icon: TrendingUp, accent: "accent" },
+    { label: t("Hot Leads (AI Scored)"), value: kpis.hotLeads.toLocaleString(), icon: Flame, accent: "warning" },
+    { label: t("Pipeline Value"), value: formatINR(kpis.pipelineValue), icon: Wallet, accent: "primary" },
   ];
 
-  const recommendations = [
-    { title: `${Math.round(kpis.hotLeads * 0.4)} customers ready for personal loan upsell`, confidence: 92, type: "Cross-sell" },
-    { title: t("Re-engage dormant HNI clients in Mumbai"), confidence: 84, type: "Retention" },
-    { title: `Pre-approved credit upgrade for salaried ${kpis.highValue > 0 ? `(${Math.round(kpis.highValue * 0.22)})` : ""}`, confidence: 78, type: "Campaign" },
-  ];
-
-  const activityCustomers = recentCustomers?.items ?? mockCustomers.slice(0, 6);
-  const activity = activityCustomers.slice(0, 6).map((c, i) => ({
-    name: c.name,
-    action: ["replied to outreach", "qualified for loan", "opened campaign", "objection handled by AI", "scheduled call", "moved to CLOSING"][i],
-    time: ["2m ago", "8m ago", "21m ago", "44m ago", "1h ago", "2h ago"][i],
-    score: "clv_score" in c ? c.clv_score : (c as { conversionScore?: number }).conversionScore ?? 0,
-  }));
+  const recent = recentCustomers?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -83,6 +72,12 @@ export function DashboardPage() {
         title={t("Dashboard")}
         subtitle={t("Real-time view of your portfolio, AI campaigns, and conversion pipeline.")}
       />
+
+      {empty && (
+        <div className="glass rounded-xl p-5 shadow-card text-sm text-muted-foreground">
+          {t("Chưa có khách hàng cá nhân nào trong hệ thống. Khách hàng doanh nghiệp xem ở tab “Doanh nghiệp”.", "No retail customers yet. Corporate customers are under the “Corporate” tab.")}
+        </div>
+      )}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -99,10 +94,6 @@ export function DashboardPage() {
               <div>
                 <div className="text-xs text-muted-foreground">{c.label}</div>
                 <div className="mt-2 text-2xl font-display font-semibold tracking-tight">{c.value}</div>
-                <div className="mt-1 inline-flex items-center gap-1 text-xs text-success">
-                  <ArrowUpRight className="w-3 h-3" />
-                  {c.delta}
-                </div>
               </div>
               <div className={`w-10 h-10 rounded-lg grid place-items-center ${c.accent === "accent" ? "bg-accent/15 text-accent" : c.accent === "warning" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary"}`}>
                 <c.icon className="w-5 h-5" />
@@ -218,7 +209,7 @@ export function DashboardPage() {
 
       {/* Pipeline funnel + AI recommendations */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 glass rounded-xl p-5 shadow-card">
+        <div className="xl:col-span-3 glass rounded-xl p-5 shadow-card">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-sm font-semibold">{t("Lifecycle Pipeline")}</div>
@@ -238,30 +229,6 @@ export function DashboardPage() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className="glass rounded-xl p-5 shadow-card">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <div className="text-sm font-semibold">{t("AI Recommendations")}</div>
-          </div>
-          <div className="space-y-2.5">
-            {recommendations.map((r) => (
-              <div key={r.title} className="p-3 rounded-lg bg-muted/40 border border-border hover:border-primary/40 transition cursor-pointer group">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="text-xs font-medium leading-snug">{r.title}</div>
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0" />
-                </div>
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/15 text-primary font-medium">{r.type}</span>
-                  <div className="flex-1 h-1 bg-muted rounded">
-                    <div className="h-full rounded gradient-primary" style={{ width: `${r.confidence}%` }} />
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">{r.confidence}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -334,34 +301,29 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* Activity */}
-      <div className="glass rounded-xl p-5 shadow-card">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-accent" />
-          <div className="text-sm font-semibold">{t("Live Activity")}</div>
-          <span className="ml-2 text-[10px] flex items-center gap-1 text-success">
-            <span className="w-1.5 h-1.5 rounded-full bg-success pulse-dot" /> Real-time
-          </span>
+      {/* Recent customers (real data) */}
+      {recent.length > 0 && (
+        <div className="glass rounded-xl p-5 shadow-card">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="w-4 h-4 text-accent" />
+            <div className="text-sm font-semibold">{t("Khách hàng gần đây", "Recent customers")}</div>
+          </div>
+          <div className="divide-y divide-border">
+            {recent.map((c) => (
+              <div key={c.customer_id} className="flex items-center gap-3 py-2.5 text-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center text-[10px] font-semibold">
+                  {c.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium">{c.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{[c.city, c.segment].filter(Boolean).join(" · ")}</div>
+                </div>
+                <Send className="w-4 h-4 text-muted-foreground" />
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="divide-y divide-border">
-          {activity.map((a) => (
-            <div key={a.name + a.time} className="flex items-center gap-3 py-2.5 text-sm">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center text-[10px] font-semibold">
-                {a.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="truncate"><span className="font-medium">{a.name}</span> <span className="text-muted-foreground">{a.action}</span></div>
-                <div className="text-[10px] text-muted-foreground">{a.time}</div>
-              </div>
-              <div className="hidden md:flex items-center gap-2">
-                <div className="text-[10px] text-muted-foreground">{t("score")}</div>
-                <span className={`text-xs font-semibold ${a.score > 75 ? "text-success" : a.score > 50 ? "text-warning" : "text-muted-foreground"}`}>{Math.round(a.score)}</span>
-              </div>
-              <Send className="w-4 h-4 text-muted-foreground" />
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

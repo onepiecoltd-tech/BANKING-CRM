@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { corpX } from "@/lib/corpApiExt";
 import { CustomerFormDialog } from "./CustomerForm";
 import { Modal, Btn, inputCls, ErrBox } from "./shared";
-import { TierBadge, FlagBadge, useMeta, productName, fmtDate, LANG_LABEL, CHANNEL_LABEL, copyText } from "./shared";
+import { TierBadge, FlagBadge, useMeta, useRmOptions, productName, fmtDate, LANG_LABEL, CHANNEL_LABEL, copyText } from "./shared";
 
 type Tab = "overview" | "cashflow" | "opps" | "draft" | "history";
 
@@ -31,6 +31,7 @@ export function CustomerDrawer({ id, onClose }: { id: string; onClose: () => voi
   const [editing, setEditing] = useState(false);
   const [moving, setMoving] = useState(false);
   const [toRm, setToRm] = useState("");
+  const rmOpts = useRmOptions(isAdmin);
   const del = useMutation({ mutationFn: () => corpX.deleteCustomer(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["corp"] }); onClose(); } });
   const move = useMutation({ mutationFn: () => corpX.reassign({ customer_ids: [id], to_rm: toRm }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["corp"] }); setMoving(false); } });
 
@@ -72,7 +73,7 @@ export function CustomerDrawer({ id, onClose }: { id: string; onClose: () => voi
           {data && (
             <div className="flex items-center gap-1.5">
               <Btn onClick={() => setEditing(true)}><Pencil className="w-3.5 h-3.5" /> {t("Sửa", "Edit")}</Btn>
-              {isAdmin && <Btn title={t("Chuyển cán bộ phụ trách", "Reassign RM")} onClick={() => { setToRm(data.customer.rm_name ?? ""); setMoving(true); }}><ArrowRightLeft className="w-3.5 h-3.5" /></Btn>}
+              {isAdmin && <Btn title={t("Chuyển cán bộ phụ trách", "Reassign RM")} onClick={() => { setToRm(""); setMoving(true); }}><ArrowRightLeft className="w-3.5 h-3.5" /></Btn>}
               {isAdmin && <Btn kind="danger" title={t("Xóa khách hàng", "Delete")} onClick={() => { if (window.confirm(t("Xóa khách hàng này và toàn bộ dữ liệu liên quan (dòng tiền, cơ hội, hội thoại)? Không thể hoàn tác.", "Delete this customer and all related data? This cannot be undone."))) del.mutate(); }}><Trash2 className="w-3.5 h-3.5" /></Btn>}
             </div>
           )}
@@ -82,8 +83,11 @@ export function CustomerDrawer({ id, onClose }: { id: string; onClose: () => voi
         {moving && (
           <Modal title={t("Chuyển cán bộ phụ trách", "Reassign relationship manager")} onClose={() => setMoving(false)}
             footer={<><ErrBox error={move.error} /><Btn onClick={() => setMoving(false)}>{t("Hủy", "Cancel")}</Btn><Btn kind="primary" disabled={!toRm.trim() || move.isPending} onClick={() => move.mutate()}>{t("Chuyển", "Move")}</Btn></>}>
-            <p className="text-xs text-muted-foreground mb-2">{t("Nhập đúng tên hiển thị của cán bộ (trùng với 'Tên CBQH' của tài khoản người dùng) để họ thấy khách hàng này.", "Enter the exact RM display name used on the user account so they can see this customer.")}</p>
-            <input className={`${inputCls} w-full`} value={toRm} onChange={(e) => setToRm(e.target.value)} />
+            <p className="text-xs text-muted-foreground mb-2">{t("Chọn CBBH có tài khoản đang hoạt động; họ sẽ thấy khách hàng này ngay, người cũ không còn thấy.", "Pick an active RM account; they see this customer immediately and the previous RM no longer does.")}</p>
+            <select className={`${inputCls} w-full`} value={toRm} onChange={(e) => setToRm(e.target.value)}>
+              <option value="">{t("— Chọn CBBH —", "— Select RM —")}</option>
+              {(rmOpts.data?.accounts ?? []).filter((a) => a.is_active).map((a) => <option key={a.username} value={a.rm_name}>{a.rm_name} ({a.username})</option>)}
+            </select>
           </Modal>
         )}
 

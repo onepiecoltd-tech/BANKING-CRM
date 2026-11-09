@@ -31,6 +31,7 @@ export interface CorpMeta {
   products: { code: string; vi: string; en: string; zh: string }[];
   stages: string[]; segments: string[]; industries: string[]; provinces: string[]; countries: string[];
   languages: Record<string, string>; bank_name: string; rm_names?: string[];
+  lifecycles?: { code: string; name: string }[]; rm_options?: { username: string; full_name: string; role: string; rm_name: string; is_active: boolean }[];
 }
 
 export interface CorpKpis {

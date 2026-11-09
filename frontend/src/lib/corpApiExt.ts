@@ -106,7 +106,24 @@ export interface ImportPreview {
   ok_sample: { row: number; action: string; name: string; errors: string[]; warnings: string[] }[]; unmapped: string[];
 }
 
+// ── phân công KH ↔ CBBH ─────────────────────────────────────────────────
+export interface RmLoad { total: number; prospect: number; existing: number }
+export interface RmAccount { username: string; full_name: string; role: string; rm_name: string; is_active: boolean }
+export interface AssignmentSummary {
+  total: number; accounts: (RmAccount & RmLoad)[]; unassigned: RmLoad;
+  unmatched: ({ rm_name: string; inactive_user: string | null } & RmLoad)[]; unmatched_total: number;
+}
+export interface AssignResult { matched: number; already: number; moved: number; from: { rm_name: string; count: number }[]; dry_run?: boolean }
+export const NO_RM = "__none__";
+
+export type CleanupGroup = Record<string, number> & { total: number };
+export type CleanupPlan = { retail: CleanupGroup; corp_demo: CleanupGroup; junk: CleanupGroup; real_corp_customers: number; backup_ok: boolean };
+export type CleanupResult = { backup: string; deleted_total: number; plan: CleanupPlan; vacuumed?: boolean };
+
 export const corpX = {
+  // phân công
+  assignment: () => j<AssignmentSummary>("/admin/assignment"),
+  assign: (b: { to_rm: string; customer_ids?: string[]; filters?: Record<string, string>; dry_run?: boolean }) => post<AssignResult>("/admin/assign", b),
   // khách hàng
   createCustomer: (b: CustomerForm) => post<{ customer_id: string }>("/customers", b),
   updateCustomer: (id: string, b: CustomerForm) => put<{ ok: boolean }>(`/customers/${id}`, b),
@@ -142,6 +159,8 @@ export const corpX = {
   settings: () => j<SettingsResp>("/settings"),
   saveSettings: (b: Partial<CorpSettings>) => put<{ settings: CorpSettings }>("/settings", b),
   clearDemo: () => post<{ deleted: number }>("/admin/clear-demo", {}),
+  cleanupPlan: () => j<CleanupPlan>("/admin/cleanup"),
+  cleanupRun: (b: { retail: boolean; corp_demo: boolean; junk: boolean; confirm: string }) => post<CleanupResult>("/admin/cleanup", b),
   /** Tải bản sao lưu CSDL (Admin). Dùng fetch → blob vì cần header Authorization. */
   downloadBackup: async () => {
     const res = await fetch("/api/corp/admin/backup");

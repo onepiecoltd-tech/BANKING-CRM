@@ -30,6 +30,7 @@ import { Route as CorpCampaignsRouteImport } from './routes/corp.campaigns'
 import { Route as CorpAnalyticsRouteImport } from './routes/corp.analytics'
 import { Route as CorpAgentRouteImport } from './routes/corp.agent'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminAssignRouteImport } from './routes/admin.assign'
 
 const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/workspace',
@@ -136,6 +137,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAssignRoute = AdminAssignRouteImport.update({
+  id: '/admin/assign',
+  path: '/admin/assign',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/assign': typeof AdminAssignRoute
   '/admin/users': typeof AdminUsersRoute
   '/corp/agent': typeof CorpAgentRoute
   '/corp/analytics': typeof CorpAnalyticsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/assign': typeof AdminAssignRoute
   '/admin/users': typeof AdminUsersRoute
   '/corp/agent': typeof CorpAgentRoute
   '/corp/analytics': typeof CorpAnalyticsRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/reasoning': typeof ReasoningRoute
   '/settings': typeof SettingsRoute
   '/workspace': typeof WorkspaceRoute
+  '/admin/assign': typeof AdminAssignRoute
   '/admin/users': typeof AdminUsersRoute
   '/corp/agent': typeof CorpAgentRoute
   '/corp/analytics': typeof CorpAnalyticsRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/assign'
     | '/admin/users'
     | '/corp/agent'
     | '/corp/analytics'
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/assign'
     | '/admin/users'
     | '/corp/agent'
     | '/corp/analytics'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/reasoning'
     | '/settings'
     | '/workspace'
+    | '/admin/assign'
     | '/admin/users'
     | '/corp/agent'
     | '/corp/analytics'
@@ -289,6 +301,7 @@ export interface RootRouteChildren {
   ReasoningRoute: typeof ReasoningRoute
   SettingsRoute: typeof SettingsRoute
   WorkspaceRoute: typeof WorkspaceRoute
+  AdminAssignRoute: typeof AdminAssignRoute
   AdminUsersRoute: typeof AdminUsersRoute
   CorpAgentRoute: typeof CorpAgentRoute
   CorpAnalyticsRoute: typeof CorpAnalyticsRoute
@@ -452,6 +465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/assign': {
+      id: '/admin/assign'
+      path: '/admin/assign'
+      fullPath: '/admin/assign'
+      preLoaderRoute: typeof AdminAssignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReasoningRoute: ReasoningRoute,
   SettingsRoute: SettingsRoute,
   WorkspaceRoute: WorkspaceRoute,
+  AdminAssignRoute: AdminAssignRoute,
   AdminUsersRoute: AdminUsersRoute,
   CorpAgentRoute: CorpAgentRoute,
   CorpAnalyticsRoute: CorpAnalyticsRoute,

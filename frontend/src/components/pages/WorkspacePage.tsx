@@ -67,7 +67,7 @@ const SUGGESTED = [
   "Find high-value customers likely to convert for a personal loan this month",
   "Show me dormant premium clients and draft a re-engagement message",
   "Which customers have credit score above 750 and no credit card?",
-  "Score the top 5 affluent customers in Mumbai",
+  "Score the top 5 affluent customers",
 ];
 
 // ── Model registry ────────────────────────────────────────────────────────────

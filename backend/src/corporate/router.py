@@ -11,7 +11,7 @@ from .models import CorpCustomer, CorpMonthly, CorpInteraction, CorpOpportunity,
 from .catalog import PRODUCTS, STAGES, STAGE_PROB, INDUSTRIES, TITLES, LANG_NAMES, LIFECYCLES
 from . import scoring, messages, agent
 from .seed import ensure_seed
-from .access import rm_filter, visible_ids, get_customer_or_403, get_settings, is_admin
+from .access import rm_filter, visible_ids, get_customer_or_403, get_settings, is_admin, rm_accounts, NO_RM
 from src.accounts.deps import current_user, require_admin, client_ip
 from src.accounts.service import audit
 
@@ -81,6 +81,8 @@ def meta(user=Depends(current_user)):
             "lifecycles": [{"code": k, "name": v} for k, v in LIFECYCLES.items()],
             "bank_name": get_settings(db)["bank_name"],
             "rm_names": sorted({c.rm_name for c in cs if c.rm_name}) if is_admin(user) else [user.rm_name],
+            # CBBH có tài khoản đang hoạt động: danh sách hợp lệ để gán khách hàng (chỉ Admin)
+            "rm_options": [a for a in rm_accounts(db) if a["is_active"]] if is_admin(user) else [],
         }
     finally:
         db.close()
@@ -148,6 +150,36 @@ def signals(limit: int = 8, user=Depends(current_user)):
 
 
 # ── customers ────────────────────────────────────────────────────────────────
+FILTER_KEYS = ("q", "segment", "ownership", "country", "industry", "province", "tier", "product", "risk", "rm", "lifecycle")
+
+
+def apply_filters(items, f: dict):
+    """Lọc danh sách khách hàng theo các điều kiện của màn hình danh sách (dùng chung với phân công hàng loạt)."""
+    q, segment, ownership = f.get("q"), f.get("segment"), f.get("ownership")
+    country, industry, province = f.get("country"), f.get("industry"), f.get("province")
+    tier, product, risk, rm, lifecycle = f.get("tier"), f.get("product"), f.get("risk"), f.get("rm"), f.get("lifecycle")
+    ql = (q or "").lower()
+    res = []
+    for it in items:
+        c, a = it["c"], it["a"]
+        if ql and ql not in c["name"].lower() and ql not in (c["name_zh"] or "") and ql not in c["tax_code"] and ql not in c["customer_id"].lower():
+            continue
+        if rm == NO_RM:
+            if (c["rm_name"] or "").strip(): continue
+        elif rm and c["rm_name"] != rm: continue
+        if lifecycle and (c.get("lifecycle") or "prospect") != lifecycle: continue
+        if segment and c["segment"] != segment: continue
+        if ownership and c["ownership"] != ownership: continue
+        if country and c["investor_country"] != country: continue
+        if industry and c["industry"] != industry: continue
+        if province and c["province"] != province: continue
+        if tier and a["tier"] != tier: continue
+        if product and a["propensities"].get(product, {}).get("score", 0) < 60: continue
+        if risk and not any(f_["code"] == risk for f_ in a["risk_flags"]): continue
+        res.append(it)
+    return res
+
+
 @router.get("/customers")
 def list_customers(
     q: Optional[str] = None, segment: Optional[str] = None, ownership: Optional[str] = None,
@@ -160,23 +192,8 @@ def list_customers(
     db = SessionLocal()
     try:
         items = _items(db, user)
-        ql = (q or "").lower()
-        res = []
-        for it in items:
-            c, a = it["c"], it["a"]
-            if ql and ql not in c["name"].lower() and ql not in (c["name_zh"] or "") and ql not in c["tax_code"] and ql not in c["customer_id"].lower():
-                continue
-            if rm and c["rm_name"] != rm: continue
-            if lifecycle and (c.get("lifecycle") or "prospect") != lifecycle: continue
-            if segment and c["segment"] != segment: continue
-            if ownership and c["ownership"] != ownership: continue
-            if country and c["investor_country"] != country: continue
-            if industry and c["industry"] != industry: continue
-            if province and c["province"] != province: continue
-            if tier and a["tier"] != tier: continue
-            if product and a["propensities"].get(product, {}).get("score", 0) < 60: continue
-            if risk and not any(f["code"] == risk for f in a["risk_flags"]): continue
-            res.append(it)
+        res = apply_filters(items, dict(q=q, segment=segment, ownership=ownership, country=country, industry=industry,
+                                        province=province, tier=tier, product=product, risk=risk, rm=rm, lifecycle=lifecycle))
         keyf = {
             "priority": lambda it: -it["a"]["priority_score"],
             "revenue": lambda it: -it["c"]["annual_revenue_bn"],
