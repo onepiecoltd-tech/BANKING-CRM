@@ -120,7 +120,18 @@ export type CleanupGroup = Record<string, number> & { total: number };
 export type CleanupPlan = { retail: CleanupGroup; corp_demo: CleanupGroup; junk: CleanupGroup; real_corp_customers: number; backup_ok: boolean };
 export type CleanupResult = { backup: string; deleted_total: number; plan: CleanupPlan; vacuumed?: boolean };
 
+export interface LookupResult {
+  status: "matched" | "not_found" | "blocked" | "error" | "bad_mst" | "none"; message?: string; representative?: string; address?: string;
+  operating_status?: string; phone?: string; source_url?: string; checked_at?: string; filled?: string[];
+}
+export interface LookupJob { running: boolean; total: number; done: number; matched: number; not_found: number; filled: number; state: string; message: string }
+
 export const corpX = {
+  lookupLast: (id: string) => j<LookupResult>(`/lookup/${id}`),
+  lookupOne: (id: string) => post<LookupResult>(`/lookup/${id}`, {}),
+  lookupBatchStart: (b: { only_missing: boolean; limit: number }) => post<LookupJob>("/lookup/batch/start", b),
+  lookupBatchStatus: () => j<LookupJob>("/lookup/batch/status"),
+  lookupBatchStop: () => post<LookupJob>("/lookup/batch/stop", {}),
   // phân công
   assignment: () => j<AssignmentSummary>("/admin/assignment"),
   assign: (b: { to_rm: string; customer_ids?: string[]; filters?: Record<string, string>; dry_run?: boolean }) => post<AssignResult>("/admin/assign", b),

@@ -8,5 +8,6 @@ from .analytics import router as analytics_router
 from .import_router import router as import_router
 from .assign import router as assign_router
 from .cleanup import router as cleanup_router
+from .lookup import router as lookup_router
 
-ALL = [crud_router, settings_router, outreach_router, conv_router, reasoning_router, analytics_router, import_router, assign_router, cleanup_router]
+ALL = [crud_router, settings_router, outreach_router, conv_router, reasoning_router, analytics_router, import_router, assign_router, cleanup_router, lookup_router]

@@ -135,6 +135,7 @@ function SettingsInner() {
           <div className="mt-2"><ErrBox error={backup.error} /></div>
         </Card>
 
+        <LookupBatchCard />
         <CleanupCard />
       </div>
     </div>
@@ -153,6 +154,37 @@ const GROUPS = [
     hint: ["Dòng mồ côi (khách hàng đã bị xóa), ghi chú trống, nhật ký chạy AI bị lỗi, chiến dịch rỗng.", "Orphan rows (customer deleted), blank notes, failed AI-run logs, empty campaigns."],
     rows: [["orphans", "Dòng mồ côi", "Orphan rows"], ["blank_notes", "Ghi chú trống", "Blank notes"], ["failed_ai_runs", "Log AI lỗi", "Failed AI runs"], ["empty_campaigns", "Chiến dịch rỗng", "Empty campaigns"]] },
 ];
+
+function LookupBatchCard() {
+  const qc = useQueryClient();
+  const [limit, setLimit] = useState(100);
+  const [onlyMissing, setOnlyMissing] = useState(true);
+  const { data: job } = useQuery({ queryKey: ["corp", "lookup-job"], queryFn: corpX.lookupBatchStatus, refetchInterval: (q) => (q.state.data?.running ? 3000 : false) });
+  const start = useMutation({ mutationFn: () => corpX.lookupBatchStart({ only_missing: onlyMissing, limit }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["corp", "lookup-job"] }); } });
+  const stop = useMutation({ mutationFn: corpX.lookupBatchStop, onSuccess: () => qc.invalidateQueries({ queryKey: ["corp", "lookup-job"] }) });
+  const running = !!job?.running;
+  return (
+    <Card title={t("Tra cứu người đại diện theo MST (hàng loạt)", "Bulk tax-code lookup")} className="md:col-span-2">
+      <p className="text-sm text-muted-foreground">
+        {t("Đọc hồ sơ công khai theo MST: người đại diện pháp luật, địa chỉ, tình trạng, SĐT (nếu trang có). Chỉ điền ô còn trống, lưu URL nguồn, chạy tuần tự có giãn cách và tự dừng khi nguồn yêu cầu xác minh. Email thường không có trên nguồn công khai.",
+          "Reads the public profile by tax code. Only fills blank fields, keeps the source URL, runs sequentially with delays and stops if the source asks for verification.")}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-1.5"><input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />{t("Chỉ khách thiếu người liên hệ/SĐT", "Only customers missing contact")}</label>
+        <label className="flex items-center gap-1.5">{t("Tối đa", "Max")}<input type="number" min={1} max={500} value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="w-20 rounded border border-border bg-background px-2 py-1" /></label>
+        <Btn kind="primary" onClick={() => start.mutate()} disabled={running || start.isPending}>{t("Bắt đầu tra", "Start")}</Btn>
+        {running && <Btn onClick={() => stop.mutate()}>{t("Dừng", "Stop")}</Btn>}
+      </div>
+      {start.error && <div className="text-xs text-destructive mt-2">{(start.error as Error).message}</div>}
+      {job && job.state !== "idle" && (
+        <div className="mt-3 text-xs text-muted-foreground">
+          {job.done}/{job.total} · {t("khớp", "matched")} {job.matched} · {t("không có", "not found")} {job.not_found} · {t("ô đã điền", "fields filled")} {job.filled} · {job.state}
+          {job.message ? ` — ${job.message}` : ""}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function CleanupCard() {
   const qc = useQueryClient();

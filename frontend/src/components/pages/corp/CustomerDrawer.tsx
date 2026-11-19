@@ -116,6 +116,31 @@ export function CustomerDrawer({ id, onClose }: { id: string; onClose: () => voi
 type D = NonNullable<ReturnType<typeof useQuery<Awaited<ReturnType<typeof corp.customer>>>>["data"]>;
 type Meta = ReturnType<typeof useMeta>["data"];
 
+function MstLookup({ id }: { id: string }) {
+  const qc = useQueryClient();
+  const { data: last } = useQuery({ queryKey: ["corp", "lookup", id], queryFn: () => corpX.lookupLast(id) });
+  const run = useMutation({ mutationFn: () => corpX.lookupOne(id), onSuccess: () => { qc.invalidateQueries({ queryKey: ["corp"] }); } });
+  const r = run.data ?? last;
+  return (
+    <div className="text-right">
+      <Btn onClick={() => run.mutate()} disabled={run.isPending}>{run.isPending ? t("Đang tra…", "Looking up…") : t("Tra cứu theo MST", "Look up by tax code")}</Btn>
+      {run.error && <div className="text-[11px] text-destructive mt-1">{(run.error as Error).message}</div>}
+      {r && r.status !== "none" && (
+        <div className="text-[11px] text-muted-foreground mt-1 max-w-[320px] ml-auto">
+          {r.status === "matched" ? (
+            <>
+              {t("Người đại diện", "Legal rep.")}: {r.representative || "—"} · {r.operating_status || "—"}<br />
+              {r.address}{r.phone ? ` · ${r.phone}` : ""}<br />
+              {r.source_url && <a href={r.source_url} target="_blank" rel="noreferrer" className="underline">{t("Nguồn", "Source")}</a>}
+              {r.checked_at ? ` · ${fmtDate(r.checked_at)}` : ""}
+            </>
+          ) : <span className={r.status === "blocked" ? "text-destructive" : ""}>{r.message}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Overview({ d, meta }: { d: D; meta: Meta }) {
   const c = d.customer;
   const a = d.analysis;
@@ -159,7 +184,10 @@ function Overview({ d, meta }: { d: D; meta: Meta }) {
         </div>
       </div>
       <div className="rounded-xl bg-muted/30 p-4">
-        <div className="text-xs font-semibold mb-2">{t("Đầu mối liên hệ", "Contact")}</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-xs font-semibold">{t("Đầu mối liên hệ", "Contact")}</div>
+          {c.tax_code && <MstLookup id={c.customer_id} />}
+        </div>
         <div className="text-sm">{c.contact_name}{c.contact_name_zh ? ` (${c.contact_name_zh})` : ""} · {c.contact_title}</div>
         <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-4">
           <span><Phone className="inline w-3 h-3 mr-1" />{c.contact_phone}</span>

@@ -1,0 +1,55 @@
+# ── Secrets — NEVER commit ────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+
+# ── Python ────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.pkl
+*.joblib
+
+# ── Database ──────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Node / Frontend ───────────────────────────────────────────────────
+node_modules/
+dist/
+dist-ssr/
+.tanstack/
+.nitro/
+.wrangler/
+*.local
+
+# ── WhatsApp session (personal auth data) ─────────────────────────────
+**/.ww-session/
+**/.wwebjs_cache/
+**/.wwebjs_auth/
+
+# ── Logs ──────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ───────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Private / Personal (never push) ──────────────────────────────────
+INTERVIEW_PREP.txt
